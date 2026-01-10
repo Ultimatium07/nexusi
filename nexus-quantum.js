@@ -1142,3 +1142,257 @@ if (document.readyState === 'loading') {
 // 🌍 Global functions for HTML onclick handlers
 window.QuantumMining = new QuantumMining();
 window.QuantumAI = new QuantumAI();
+
+// ============================================
+// ADDITIONAL FUNCTIONS FOR FULL FUNCTIONALITY
+// ============================================
+
+// Quiz Functions
+function startQuiz() {
+    const topic = document.querySelector('.topic-btn.active').dataset.topic;
+    const difficulty = document.querySelector('.diff-btn.active').dataset.difficulty;
+    const count = parseInt(document.querySelector('.count-btn.active').dataset.count);
+    
+    QuantumState.quiz.active = true;
+    QuantumState.quiz.topic = topic;
+    QuantumState.quiz.difficulty = difficulty;
+    QuantumState.quiz.count = count;
+    QuantumState.quiz.current = 0;
+    QuantumState.quiz.score = 0;
+    
+    // Generate questions
+    QuantumAI.generateQuiz(topic, difficulty, count).then(questions => {
+        QuantumState.quiz.questions = questions;
+        showQuizInterface();
+    });
+}
+
+function showQuizInterface() {
+    const configContainer = document.querySelector('.quiz-config');
+    const startContainer = document.querySelector('.quiz-start-container');
+    const activeContainer = document.getElementById('quizActiveContainer');
+    
+    configContainer.style.display = 'none';
+    startContainer.style.display = 'none';
+    activeContainer.style.display = 'block';
+    
+    displayQuizQuestion();
+}
+
+function displayQuizQuestion() {
+    const question = QuantumState.quiz.questions[QuantumState.quiz.current];
+    const questionText = document.getElementById('questionText');
+    const answersContainer = document.getElementById('quizAnswersContainer');
+    const currentNum = document.getElementById('currentQuestion');
+    const totalNum = document.getElementById('totalQuestions');
+    const progressFill = document.getElementById('quizProgressFill');
+    
+    questionText.textContent = question.question;
+    currentNum.textContent = QuantumState.quiz.current + 1;
+    totalNum.textContent = QuantumState.quiz.questions.length;
+    progressFill.style.width = `${((QuantumState.quiz.current + 1) / QuantumState.quiz.questions.length) * 100}%`;
+    
+    answersContainer.innerHTML = question.options.map((option, index) => `
+        <button class="quiz-answer" onclick="selectQuizAnswer(${index})">
+            ${option}
+        </button>
+    `).join('');
+}
+
+function selectQuizAnswer(answerIndex) {
+    const question = QuantumState.quiz.questions[QuantumState.quiz.current];
+    const isCorrect = answerIndex === question.correct;
+    
+    // Update score
+    if (isCorrect) {
+        QuantumState.quiz.score++;
+        QuantumState.user.xp += 50;
+        QuantumState.user.gold += 100;
+        QuantumApp.ui.updateXP(QuantumState.user.xp);
+        QuantumApp.ui.updateGold(QuantumState.user.gold);
+    }
+    
+    // Show feedback
+    const answers = document.querySelectorAll('.quiz-answer');
+    answers[answerIndex].classList.add(isCorrect ? 'correct' : 'wrong');
+    if (!isCorrect) {
+        answers[question.correct].classList.add('correct');
+    }
+    
+    // Disable all answers
+    answers.forEach(answer => answer.onclick = null);
+    
+    // Next question after delay
+    setTimeout(() => {
+        QuantumState.quiz.current++;
+        if (QuantumState.quiz.current < QuantumState.quiz.questions.length) {
+            displayQuizQuestion();
+        } else {
+            showQuizResults();
+        }
+    }, 2000);
+}
+
+function showQuizResults() {
+    const activeContainer = document.getElementById('quizActiveContainer');
+    const percentage = Math.round((QuantumState.quiz.score / QuantumState.quiz.questions.length) * 100);
+    
+    activeContainer.innerHTML = `
+        <div class="quiz-results">
+            <h3>Quiz Complete!</h3>
+            <div class="score-display">
+                <div class="score-circle">${percentage}%</div>
+                <p>You got ${QuantumState.quiz.score} out of ${QuantumState.quiz.questions.length} correct!</p>
+            </div>
+            <button class="quantum-start-quiz" onclick="resetQuiz()">
+                Try Another Quiz
+            </button>
+        </div>
+    `;
+    
+    // Add achievement if perfect score
+    if (percentage === 100) {
+        if (!QuantumState.gamification.achievements.includes('quiz_master')) {
+            QuantumState.gamification.achievements.push('quiz_master');
+            QuantumApp.ui.showNotification('🏆 Quiz Master Achievement!', 'achievement');
+        }
+    }
+}
+
+function resetQuiz() {
+    QuantumState.quiz.active = false;
+    location.reload(); // Simple reload for now
+}
+
+// Shop Functions
+function switchShopTab(tab) {
+    const tabs = document.querySelectorAll('.shop-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Render content based on tab
+    if (tab === 'upgrades') {
+        renderShop();
+    } else {
+        // Render boosters
+        renderBoosters();
+    }
+}
+
+function renderBoosters() {
+    const grid = document.getElementById('upgradesGrid');
+    const boosters = [
+        { type: 'energy_refill', name: 'Energy Refill', description: 'Full energy restore', cost: 100, icon: 'battery-three-quarters' },
+        { type: 'double_tap', name: 'Double Tap', description: '2x power for 5 minutes', cost: 500, icon: 'hand-sparkles' },
+        { type: 'lucky_boost', name: 'Lucky Boost', description: '50% crit for 10 minutes', cost: 1000, icon: 'clover' }
+    ];
+    
+    grid.innerHTML = boosters.map(booster => `
+        <div class="booster-card">
+            <div class="booster-header">
+                <div class="booster-icon">
+                    <i class="fas fa-${booster.icon}"></i>
+                </div>
+                <div class="booster-info">
+                    <h4>${booster.name}</h4>
+                    <p>${booster.description}</p>
+                </div>
+            </div>
+            <div class="booster-cost">
+                <i class="fas fa-coins"></i>
+                ${booster.cost}
+            </div>
+            <button class="booster-btn" onclick="purchaseBooster('${booster.type}')">
+                Buy
+            </button>
+        </div>
+    `).join('');
+}
+
+// Gamification Functions
+function switchGamTab(tab) {
+    const tabs = document.querySelectorAll('.gam-tab');
+    const contents = document.querySelectorAll('.gam-tab-content');
+    
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(tab + 'Tab').classList.add('active');
+    
+    // Load content
+    if (tab === 'achievements') {
+        renderAchievements();
+    } else if (tab === 'leaderboard') {
+        renderLeaderboard();
+    } else if (tab === 'daily') {
+        renderDailyChallenges();
+    }
+}
+
+// Modal Functions
+function closeWaygroundRoom() {
+    document.getElementById('waygroundRoomModal').classList.remove('active');
+}
+
+function closeFileAnalysis() {
+    document.getElementById('fileAnalysisModal').classList.remove('active');
+}
+
+function closeAIChat() {
+    document.getElementById('aiChatModal').classList.remove('active');
+}
+
+// Quiz topic/difficulty/count selectors
+document.addEventListener('DOMContentLoaded', () => {
+    // Topic buttons
+    document.querySelectorAll('.topic-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+    
+    // Difficulty buttons
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+    
+    // Count buttons
+    document.querySelectorAll('.count-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+    
+    // Start quiz button
+    const startQuizBtn = document.getElementById('startQuizBtn');
+    if (startQuizBtn) {
+        startQuizBtn.addEventListener('click', startQuiz);
+    }
+    
+    // Claim auto mining button
+    const claimBtn = document.getElementById('claimBtn');
+    if (claimBtn) {
+        claimBtn.addEventListener('click', () => {
+            QuantumMining.claimAutoMining();
+        });
+    }
+    
+    // Initialize shop
+    renderShop();
+});
+
+// Make functions globally available
+window.startQuiz = startQuiz;
+window.selectQuizAnswer = selectQuizAnswer;
+window.resetQuiz = resetQuiz;
+window.switchShopTab = switchShopTab;
+window.switchGamTab = switchGamTab;
+window.closeWaygroundRoom = closeWaygroundRoom;
+window.closeFileAnalysis = closeFileAnalysis;
+window.closeAIChat = closeAIChat;
