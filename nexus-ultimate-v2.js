@@ -250,6 +250,14 @@ async function initApp() {
     setTimeout(() => {
         ANIMATIONS.playIntro();
         document.getElementById('app').classList.add('visible');
+        
+        // Fallback: ensure loader hides even if GSAP fails
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            if (loader && !loader.classList.contains('hidden')) {
+                loader.classList.add('hidden');
+            }
+        }, 2000);
     }, 100);
     
     // 13. Setup navigation
