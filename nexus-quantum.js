@@ -1082,20 +1082,16 @@ const QuantumApp = {
     },
     
     loadGameData() {
-        // Load user data
         const savedUser = localStorage.getItem('quantumUser');
+        const savedMining = localStorage.getItem('quantumMining');
+        
         if (savedUser) {
             Object.assign(QuantumState.user, JSON.parse(savedUser));
         }
         
-        // Load mining data
-        const savedMining = localStorage.getItem('quantumMining');
         if (savedMining) {
             Object.assign(QuantumState.mining, JSON.parse(savedMining));
         }
-        
-        // Load settings
-        this.ui.loadSettings();
         
         // Update UI
         this.ui.updateBalance(QuantumState.mining.balance);
