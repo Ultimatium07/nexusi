@@ -35202,7 +35202,7 @@ async def main():
     global bot, dp, db
     
     # Initialize bot and dispatcher
-    bot = Bot(token=Config.BOT_TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(token=Config.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
     dp.include_router(router)
     
