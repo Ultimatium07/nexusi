@@ -13,9 +13,9 @@ const CONFIG = {
     SUPABASE_URL: 'https://slmynfgspupncsijhzpd.supabase.co',
     SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsbXluZmdzcHVwbmNzaWpoenBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3Nzk1MTEsImV4cCI6MjA4MzM1NTUxMX0.HY8ZiQkWMRRA0jVMutTorc5Cc2zt1x38dalot-A_gLI',
     
-    // Quiz Limits
+    // Quiz Limits (free: 2/month, premium/exclusive: daily)
     QUIZ_LIMITS: {
-        free: 10,
+        free: 2,
         premium: 100,
         exclusive: 999
     },
@@ -934,6 +934,11 @@ function initTelegram() {
             const tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
+            
+            // Disable vertical swipes to prevent accidental close
+            if (tg.disableVerticalSwipes) {
+                tg.disableVerticalSwipes();
+            }
             
             // Apply theme
             document.documentElement.style.setProperty('--tg-theme-bg', tg.themeParams.bg_color || '#0a0a0f');
@@ -3340,17 +3345,46 @@ function updateUI() {
     tierEl.innerHTML = `<i class="fas fa-circle"></i><span>${tierName}</span>`;
     tierEl.className = `user-tier ${user.is_premium ? 'premium' : ''}`;
     
-    // Stats
-    document.getElementById('statLevel').textContent = user.level || 1;
-    document.getElementById('statStreak').textContent = user.streak_count || 0;
-    document.getElementById('statQuizzes').textContent = user.quiz_count_today || 0;
+    // Stats with progress bars (Yutuqlar doskasi)
+    const level = user.level || 1;
+    const streak = user.streak_count || 0;
+    const quizzes = user.quiz_count_today || 0;
+    
+    document.getElementById('statLevel').textContent = level;
+    document.getElementById('statStreak').textContent = streak;
+    document.getElementById('statQuizzes').textContent = quizzes;
+    
+    // Animate progress bars
+    const levelProgress = document.getElementById('levelProgress');
+    const streakProgress = document.getElementById('streakProgress');
+    const quizProgress = document.getElementById('quizProgress');
+    const rankProgress = document.getElementById('rankProgress');
+    
+    if (levelProgress) {
+        const xpForNext = level * 100;
+        const currentXP = user.xp || 0;
+        const levelPercent = Math.min(100, (currentXP % xpForNext) / xpForNext * 100);
+        gsap.to(levelProgress, { width: levelPercent + '%', duration: 0.8, ease: 'power2.out' });
+    }
+    if (streakProgress) {
+        const streakPercent = Math.min(100, streak * 10);
+        gsap.to(streakProgress, { width: streakPercent + '%', duration: 0.8, ease: 'power2.out', delay: 0.1 });
+    }
+    if (quizProgress) {
+        const quizPercent = Math.min(100, quizzes * 5);
+        gsap.to(quizProgress, { width: quizPercent + '%', duration: 0.8, ease: 'power2.out', delay: 0.2 });
+    }
+    if (rankProgress) {
+        gsap.to(rankProgress, { width: '50%', duration: 0.8, ease: 'power2.out', delay: 0.3 });
+    }
     
     // Mining balance
     ANIMATIONS.animateNumber('miningBalance', Math.floor(AppState.mining.balance));
     
-    // Quiz limits
+    // Quiz limits (free: monthly, premium: daily)
+    const isFree = !user.premium_type || user.premium_type === 'free';
     const limit = CONFIG.QUIZ_LIMITS[user.premium_type] || CONFIG.QUIZ_LIMITS.free;
-    const used = user.quiz_count_today || 0;
+    const used = isFree ? (user.quiz_count_month || 0) : (user.quiz_count_today || 0);
     const remaining = Math.max(0, limit - used);
     
     AppState.quiz.remaining = remaining;

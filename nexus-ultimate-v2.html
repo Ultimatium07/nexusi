@@ -91,23 +91,53 @@
             <div class="carousel-dots" id="carouselDots"></div>
         </section>
         
-        <!-- Stats Grid -->
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="statLevel">1</div>
-                <div class="stat-label">Level</div>
+        <!-- Yutuqlar Doskasi -->
+        <section class="achievements-board">
+            <div class="board-header">
+                <i class="fas fa-trophy"></i>
+                <span>Yutuqlar doskasi</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statStreak">0</div>
-                <div class="stat-label">Streak</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statQuizzes">0</div>
-                <div class="stat-label">Testlar</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statRank">#--</div>
-                <div class="stat-label">Rank</div>
+            <div class="achievement-cards">
+                <div class="achievement-card level-card">
+                    <div class="achievement-icon"><i class="fas fa-layer-group"></i></div>
+                    <div class="achievement-info">
+                        <div class="achievement-value" id="statLevel">1</div>
+                        <div class="achievement-label">Level</div>
+                        <div class="achievement-progress">
+                            <div class="progress-bar" id="levelProgress" style="width: 30%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="achievement-card streak-card">
+                    <div class="achievement-icon"><i class="fas fa-fire"></i></div>
+                    <div class="achievement-info">
+                        <div class="achievement-value" id="statStreak">0</div>
+                        <div class="achievement-label">Streak kun</div>
+                        <div class="achievement-progress">
+                            <div class="progress-bar" id="streakProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="achievement-card quiz-card">
+                    <div class="achievement-icon"><i class="fas fa-brain"></i></div>
+                    <div class="achievement-info">
+                        <div class="achievement-value" id="statQuizzes">0</div>
+                        <div class="achievement-label">Testlar</div>
+                        <div class="achievement-progress">
+                            <div class="progress-bar" id="quizProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="achievement-card rank-card">
+                    <div class="achievement-icon"><i class="fas fa-medal"></i></div>
+                    <div class="achievement-info">
+                        <div class="achievement-value" id="statRank">#--</div>
+                        <div class="achievement-label">Rank</div>
+                        <div class="achievement-progress">
+                            <div class="progress-bar" id="rankProgress" style="width: 50%"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
         
