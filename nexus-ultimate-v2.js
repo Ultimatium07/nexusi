@@ -238,66 +238,47 @@ async function initApp() {
     initQuizOptions();
     initMining();
     
+    // Init visual effects from old JS
+    initSpotlight();
+    
+    // Init canvas effects
+    const particleCanvas = document.getElementById('particleCanvas');
+    if (particleCanvas) {
+        const particles = new ParticleSystem(particleCanvas);
+        particles.update();
+    }
+    
+    const meshCanvas = document.getElementById('meshGradient');
+    if (meshCanvas) {
+        const meshGradient = new MeshGradient(meshCanvas);
+        meshGradient.animate();
+    }
+    
+    // Init mystery drops
+    new MysteryDropSystem();
+    
+    // Init visual effects (desktop only)
+    if (!('ontouchstart' in window) || window.innerWidth > 768) {
+        new CursorTrail();
+        new MagneticButtons();
+        new ParallaxEffect();
+    }
+    
     // Hide loader
     const loader = document.getElementById('loader');
     const app = document.getElementById('app');
     if (loader) loader.classList.add('hidden');
     if (app) app.classList.add('visible');
     
-    console.log('Nexus WebApp initialized');
+    console.log('Nexus WebApp initialized with enhanced visual effects!');
     
-    // 1. Load local state first
-    loadLocalState();
-    
-    // 2. Initialize Telegram WebApp
-    const tgInitialized = telegramReady;
-    console.log('Telegram initialized:', tgInitialized);
-    
-    // 3. Initialize Supabase
-    // await initSupabase(); // Already initialized above
-    
-    // 4. Load user data
-    // await loadUserData(); // Already loaded above
-    
-    // 5. Sync RPG data
-    // await syncRPGData(); // Already synced above
-    
-    // 6. Initialize visuals
-    initVisuals();
-    
-    // 7. Initialize mining
-    // initMining(); // Already initialized above
-    
-    // 8. Initialize recommendations carousel
-    // initRecommendations(); // Already initialized above
-    
-    // 9. Generate daily challenges
-    generateDailyChallenges();
-    
-    // 10. Handle URL parameters
-    handleUrlParams();
-    
-    // 11. Update UI
-    updateUI();
-    
-    // 12. Play intro animation
+    // Failsafe: ensure loader hides even if GSAP fails
     setTimeout(() => {
-        ANIMATIONS.playIntro();
-        document.getElementById('app').classList.add('visible');
-        
-        // Fallback: ensure loader hides even if GSAP fails
-        setTimeout(() => {
-            const loader = document.getElementById('loader');
-            if (loader && !loader.classList.contains('hidden')) {
-                loader.classList.add('hidden');
-            }
-        }, 2000);
-    }, 100);
-    
-    // 13. Setup navigation
-    setupNavigation();
-    
-    console.log('✅ App initialized successfully');
+        const loader = document.getElementById('loader');
+        if (loader && !loader.classList.contains('hidden')) {
+            loader.classList.add('hidden');
+        }
+    }, 2000);
 }
 
 function setupNavigation() {
@@ -2342,7 +2323,360 @@ function loadSettings() {
 }
 
 // ===========================================
-// PAYMENT SYSTEM
+// VISUAL EFFECTS (from old JS)
+// ===========================================
+
+// MYSTERY DROP SYSTEM (GACHA)
+class MysteryDropSystem {
+    constructor() {
+        this.container = document.getElementById('mysteryDropContainer');
+        this.active = false;
+        this.timer = null;
+        this.scheduleNext();
+    }
+
+    scheduleNext() {
+        const delay = (60 + Math.random() * 60) * 1000;
+        this.timer = setTimeout(() => this.spawn(), delay);
+    }
+
+    spawn() {
+        if (this.active) return;
+        this.active = true;
+
+        const drop = document.createElement('div');
+        drop.className = 'mystery-drop';
+        drop.innerHTML = '<i class="fas fa-cube"></i>';
+        
+        const x = Math.random() * (window.innerWidth - 60);
+        const y = Math.random() * (window.innerHeight - 60);
+        drop.style.left = `${x}px`;
+        drop.style.top = `${y}px`;
+
+        drop.addEventListener('click', () => this.collect(drop));
+        
+        this.container.appendChild(drop);
+
+        setTimeout(() => {
+            if (drop.parentNode) {
+                drop.remove();
+                this.active = false;
+                this.scheduleNext();
+            }
+        }, 15000);
+    }
+
+    collect(drop) {
+        drop.remove();
+        this.active = false;
+        
+        const roll = Math.random();
+        let rewardType, amount, message;
+
+        if (roll < 0.6) {
+            amount = Math.floor(1000 + Math.random() * 2000);
+            if (AppState.user) AppState.user.gold = (AppState.user.gold || 0) + amount;
+            rewardType = 'coin';
+            message = `+${amount} Gold`;
+        } else if (roll < 0.9) {
+            amount = Math.floor(500 + Math.random() * 500);
+            if (AppState.user) AppState.user.xp = (AppState.user.xp || 0) + amount;
+            rewardType = 'xp';
+            message = `+${amount} XP`;
+        } else {
+            if (AppState.mining) AppState.mining.energy = CONFIG.MAX_ENERGY;
+            rewardType = 'energy';
+            message = 'To\'liq Energiya!';
+        }
+
+        showToast(`📦 Cosmic Crate: ${message}`, 'success');
+        triggerFeedback('success');
+        playSound('achievement');
+        
+        updateUI();
+        this.scheduleNext();
+    }
+}
+
+// CURSOR TRAIL EFFECT
+class CursorTrail {
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
+        this.canvas.style.pointerEvents = 'none';
+        this.canvas.style.zIndex = '9999';
+        document.body.appendChild(this.canvas);
+        
+        this.points = [];
+        this.resize();
+        
+        window.addEventListener('resize', () => this.resize());
+        document.addEventListener('mousemove', (e) => this.addPoint(e.clientX, e.clientY));
+        
+        this.animate();
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    addPoint(x, y) {
+        this.points.push({ x, y, age: 0 });
+    }
+
+    animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.ctx.beginPath();
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        
+        for (let i = 0; i < this.points.length; i++) {
+            const p = this.points[i];
+            p.age++;
+            
+            if (p.age > 20) {
+                this.points.splice(i, 1);
+                i--;
+                continue;
+            }
+            
+            if (i > 0) {
+                const prev = this.points[i - 1];
+                this.ctx.beginPath();
+                this.ctx.moveTo(prev.x, prev.y);
+                this.ctx.lineTo(p.x, p.y);
+                
+                const opacity = 1 - (p.age / 20);
+                this.ctx.strokeStyle = `rgba(0, 255, 247, ${opacity})`;
+                this.ctx.lineWidth = 2 * opacity;
+                this.ctx.stroke();
+            }
+        }
+        
+        requestAnimationFrame(() => this.animate());
+    }
+}
+
+// MAGNETIC BUTTONS
+class MagneticButtons {
+    constructor() {
+        this.buttons = document.querySelectorAll('button, .nav-item, .function-card, .upgrade-item, .premium-utility-card');
+        this.init();
+    }
+
+    init() {
+        if ('ontouchstart' in window) return;
+
+        this.buttons.forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                
+                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'translate(0, 0)';
+                btn.style.transition = 'transform 0.3s ease-out';
+                setTimeout(() => {
+                    btn.style.transition = '';
+                }, 300);
+            });
+        });
+    }
+}
+
+// PARALLAX EFFECT
+class ParallaxEffect {
+    constructor() {
+        this.cards = document.querySelectorAll('.mining-card, .profile-header, .premium-status-card, .glass-card');
+        this.init();
+    }
+
+    init() {
+        if ('ontouchstart' in window) return;
+
+        document.addEventListener('mousemove', (e) => {
+            const x = (window.innerWidth / 2 - e.clientX) / 50;
+            const y = (window.innerHeight / 2 - e.clientY) / 50;
+
+            this.cards.forEach(card => {
+                card.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg)`;
+                card.style.transition = 'transform 0.1s ease-out';
+            });
+        });
+        
+        document.addEventListener('mouseleave', () => {
+            this.cards.forEach(card => {
+                card.style.transform = 'perspective(1000px) rotateY(0) rotateX(0)';
+                card.style.transition = 'transform 0.5s ease-out';
+            });
+        });
+    }
+}
+
+// RPG SYSTEM (Basic Shell)
+function renderRpgModal() {
+    if (!AppState.user) return '';
+    
+    const level = AppState.user.level || 1;
+    const stats = {
+        str: 10 + Math.floor(level * 1.5),
+        agi: 8 + Math.floor(level * 1.2),
+        int: 12 + Math.floor(level * 1.8),
+        hp: 100 + level * 20
+    };
+
+    return `
+        <div style="padding:10px;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="width:80px;height:80px;margin:0 auto 10px;background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;color:white;">
+                    <i class="fas fa-user-astronaut"></i>
+                </div>
+                <h3 style="margin:0;">${AppState.user.name || 'Foydalanuvchi'}</h3>
+                <p style="color:var(--text-muted);font-size:12px;">Level ${level} Space Ranger</p>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                <div style="background:var(--bg-elevated);padding:10px;border-radius:12px;text-align:center;">
+                    <div style="color:var(--accent-red);font-weight:700;">STR</div>
+                    <div style="font-size:18px;">${stats.str}</div>
+                </div>
+                <div style="background:var(--bg-elevated);padding:10px;border-radius:12px;text-align:center;">
+                    <div style="color:var(--accent-green);font-weight:700;">AGI</div>
+                    <div style="font-size:18px;">${stats.agi}</div>
+                </div>
+                <div style="background:var(--bg-elevated);padding:10px;border-radius:12px;text-align:center;">
+                    <div style="color:var(--accent-cyan);font-weight:700;">INT</div>
+                    <div style="font-size:18px;">${stats.int}</div>
+                </div>
+                <div style="background:var(--bg-elevated);padding:10px;border-radius:12px;text-align:center;">
+                    <div style="color:var(--accent-gold);font-weight:700;">HP</div>
+                    <div style="font-size:18px;">${stats.hp}</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <h4 style="margin-bottom:10px;">Inventar (0/20)</h4>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+                    ${Array(10).fill(0).map(() => `
+                        <div style="aspect-ratio:1;background:var(--bg-glass);border:1px solid var(--glass-border);border-radius:8px;"></div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <p style="text-align:center;color:var(--text-muted);font-size:11px;margin-top:20px;">
+                To'liq RPG tizimi (Janglar, Kvestlar, Buyumlar) tez kunda ishga tushadi.
+            </p>
+        </div>
+    `;
+}
+
+// PARTICLE SYSTEM (simplified version)
+class ParticleSystem {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    emit(x, y, count = 10, color = '#00fff7') {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x,
+                y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                life: 1,
+                color
+            });
+        }
+    }
+
+    update() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+                continue;
+            }
+            
+            this.ctx.globalAlpha = p.life;
+            this.ctx.fillStyle = p.color;
+            this.ctx.fillRect(p.x, p.y, 2, 2);
+        }
+        
+        requestAnimationFrame(() => this.update());
+    }
+}
+
+// MESH GRADIENT (simplified version)
+class MeshGradient {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.time = 0;
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    animate() {
+        this.time += 0.005;
+        
+        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+        gradient.addColorStop(0, `hsla(${180 + Math.sin(this.time) * 30}, 100%, 50%, 0.1)`);
+        gradient.addColorStop(0.5, `hsla(${280 + Math.cos(this.time) * 30}, 100%, 50%, 0.1)`);
+        gradient.addColorStop(1, `hsla(${200 + Math.sin(this.time + 1) * 30}, 100%, 50%, 0.1)`);
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        requestAnimationFrame(() => this.animate());
+    }
+}
+
+// SPOTLIGHT EFFECT
+function initSpotlight() {
+    const spotlight = document.getElementById('spotlight');
+    if (!spotlight) return;
+    
+    document.addEventListener('mousemove', (e) => {
+        spotlight.style.left = e.clientX + 'px';
+        spotlight.style.top = e.clientY + 'px';
+        spotlight.classList.add('active');
+    });
+    
+    document.addEventListener('mouseleave', () => {
+        spotlight.classList.remove('active');
+    });
+}
+
+// ===========================================
+// INITIALIZATION ENHANCED
 // ===========================================
 
 function formatNumber(num) {

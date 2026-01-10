@@ -34,7 +34,13 @@
     <div class="ambient-mesh"></div>
     <!-- Canvas for Visual Effects -->
     <!-- Note: These are created dynamically by JS, but placeholders help with structure -->
-    
+    <!-- Background Effects -->
+    <canvas id="meshGradient"></canvas>
+    <canvas id="particleCanvas"></canvas>
+    <div id="spotlight"></div>
+    <div class="noise-overlay"></div>
+    <div class="scanline"></div>
+
     <!-- Loader -->
     <div id="loader">
         <div class="loader-content">
@@ -1015,43 +1021,6 @@
         <div class="nav-item active" data-section="home" onclick="navigateTo('home')">
             <i class="fas fa-home"></i>
             <span>Bosh</span>
-        </div>
-        <div class="nav-item" data-section="quiz" onclick="navigateTo('quiz')">
-            <i class="fas fa-brain"></i>
-            <span>Quiz</span>
-        </div>
-        <div class="nav-item" data-section="gamification" onclick="navigateTo('gamification')">
-            <i class="fas fa-trophy"></i>
-            <span>Game</span>
-        </div>
-        <div class="nav-item" data-section="premium" onclick="navigateTo('premium')">
-            <i class="fas fa-crown"></i>
-            <span>Premium</span>
-        </div>
-        <div class="nav-item" data-section="profile" onclick="navigateTo('profile')">
-            <i class="fas fa-user"></i>
-            <span>Profil</span>
-        </div>
-    </nav>
-    
-    <!-- Payment Modal -->
-    <div class="modal-overlay" id="paymentModal">
-        <div class="modal">
-            <div class="modal-header">
-                <div class="modal-title">To'lov</div>
-                <button class="modal-close" onclick="closeModal('paymentModal')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="payment-card">
-                    <div class="payment-info">
-                        <div class="payment-amount" id="paymentAmount">25,000 so'm</div>
-                        <div class="payment-details" id="paymentPlan">Premium - 1 oylik</div>
-                    </div>
-                    
-                    <div class="card-details">
-                        <div class="card-number">9860 1766 2113 5019</div>
                         <div class="card-holder">Asadbek O'sarov</div>
                     </div>
                     
