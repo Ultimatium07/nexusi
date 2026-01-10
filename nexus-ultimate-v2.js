@@ -40,6 +40,382 @@ const CONFIG = {
 };
 
 // ===========================================
+// AI SERVICE - OpenAI Integration
+// ===========================================
+
+const AIService = {
+    API_BASE: window.location.hostname === 'localhost' 
+        ? 'http://localhost:8888/.netlify/functions'
+        : '/.netlify/functions',
+    
+    async generateQuiz(topic, difficulty, count) {
+        try {
+            const response = await fetch(`${this.API_BASE}/ai-quiz`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic, difficulty, count, language: 'uz' })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.success ? data.quiz : null;
+            }
+        } catch (error) {
+            console.error('AI Quiz error:', error);
+        }
+        return null;
+    },
+    
+    async analyzeText(text, action, options = {}) {
+        try {
+            const response = await fetch(`${this.API_BASE}/analyze-text`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, action, options })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.success ? data.result : null;
+            }
+        } catch (error) {
+            console.error('Text analysis error:', error);
+        }
+        return null;
+    },
+    
+    async chat(message, context = [], mode = 'tutor') {
+        try {
+            const response = await fetch(`${this.API_BASE}/ai-chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, context, mode })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.success ? data.reply : data.reply || "Xatolik yuz berdi";
+            }
+        } catch (error) {
+            console.error('AI Chat error:', error);
+        }
+        return "Kechirasiz, hozir javob bera olmayapman.";
+    }
+};
+
+// ===========================================
+// SOUND ENGINE - Audio Effects
+// ===========================================
+
+const SoundEngine = {
+    enabled: true,
+    volume: 0.5,
+    sounds: {},
+    
+    // Sound URLs (using free sound effects)
+    soundUrls: {
+        tap: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+        success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+        error: 'https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3',
+        levelup: 'https://assets.mixkit.co/active_storage/sfx/1997/1997-preview.mp3',
+        coin: 'https://assets.mixkit.co/active_storage/sfx/888/888-preview.mp3',
+        achievement: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
+        click: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+        whoosh: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3',
+        pop: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+        notify: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
+    },
+    
+    init() {
+        // Preload sounds
+        Object.entries(this.soundUrls).forEach(([name, url]) => {
+            const audio = new Audio();
+            audio.preload = 'auto';
+            audio.volume = this.volume;
+            audio.src = url;
+            this.sounds[name] = audio;
+        });
+        
+        // Load settings
+        const savedSettings = localStorage.getItem('nexus_sound_settings');
+        if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            this.enabled = settings.enabled !== false;
+            this.volume = settings.volume || 0.5;
+        }
+        
+        console.log('🔊 Sound Engine initialized');
+    },
+    
+    play(soundName) {
+        if (!this.enabled) return;
+        
+        const sound = this.sounds[soundName];
+        if (sound) {
+            sound.currentTime = 0;
+            sound.volume = this.volume;
+            sound.play().catch(() => {}); // Ignore autoplay errors
+        }
+    },
+    
+    setVolume(vol) {
+        this.volume = Math.max(0, Math.min(1, vol));
+        Object.values(this.sounds).forEach(s => s.volume = this.volume);
+        this.saveSettings();
+    },
+    
+    toggle(enabled) {
+        this.enabled = enabled;
+        this.saveSettings();
+    },
+    
+    saveSettings() {
+        localStorage.setItem('nexus_sound_settings', JSON.stringify({
+            enabled: this.enabled,
+            volume: this.volume
+        }));
+    }
+};
+
+// ===========================================
+// HAPTIC FEEDBACK
+// ===========================================
+
+const HapticEngine = {
+    enabled: true,
+    
+    init() {
+        const saved = localStorage.getItem('nexus_haptic_enabled');
+        this.enabled = saved !== 'false';
+    },
+    
+    vibrate(pattern = 'light') {
+        if (!this.enabled) return;
+        
+        // Telegram WebApp haptic
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+            const tgHaptic = window.Telegram.WebApp.HapticFeedback;
+            switch (pattern) {
+                case 'light':
+                    tgHaptic.impactOccurred('light');
+                    break;
+                case 'medium':
+                    tgHaptic.impactOccurred('medium');
+                    break;
+                case 'heavy':
+                    tgHaptic.impactOccurred('heavy');
+                    break;
+                case 'success':
+                    tgHaptic.notificationOccurred('success');
+                    break;
+                case 'error':
+                    tgHaptic.notificationOccurred('error');
+                    break;
+                case 'warning':
+                    tgHaptic.notificationOccurred('warning');
+                    break;
+                default:
+                    tgHaptic.impactOccurred('light');
+            }
+            return;
+        }
+        
+        // Fallback to Navigator vibrate API
+        if (navigator.vibrate) {
+            switch (pattern) {
+                case 'light':
+                    navigator.vibrate(10);
+                    break;
+                case 'medium':
+                    navigator.vibrate(25);
+                    break;
+                case 'heavy':
+                    navigator.vibrate(50);
+                    break;
+                case 'success':
+                    navigator.vibrate([20, 50, 20]);
+                    break;
+                case 'error':
+                    navigator.vibrate([50, 30, 50, 30, 50]);
+                    break;
+                default:
+                    navigator.vibrate(15);
+            }
+        }
+    },
+    
+    toggle(enabled) {
+        this.enabled = enabled;
+        localStorage.setItem('nexus_haptic_enabled', enabled);
+    }
+};
+
+// ===========================================
+// FILE UPLOAD & ANALYSIS
+// ===========================================
+
+const FileAnalyzer = {
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+    supportedTypes: ['.txt', '.pdf', '.doc', '.docx', '.md'],
+    
+    async openFilePicker() {
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.txt,.pdf,.doc,.docx,.md,text/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    resolve(file);
+                } else {
+                    resolve(null);
+                }
+            };
+            input.click();
+        });
+    },
+    
+    async readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            if (file.size > this.maxFileSize) {
+                reject(new Error('Fayl juda katta (max 5MB)'));
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Faylni o\'qib bo\'lmadi'));
+            reader.readAsText(file);
+        });
+    },
+    
+    async analyzeFile(action = 'summarize') {
+        try {
+            showToast('Fayl tanlang', 'Tahlil qilish uchun fayl tanlang', 'info');
+            
+            const file = await this.openFilePicker();
+            if (!file) return null;
+            
+            showToast('Yuklanmoqda...', file.name, 'info');
+            
+            // Read file content
+            let text;
+            if (file.type === 'application/pdf') {
+                // For PDF, we'd need a PDF.js library - for now show message
+                showToast('PDF', 'PDF fayllar yaqinda qo\'llab-quvvatlanadi', 'warning');
+                return null;
+            } else {
+                text = await this.readFileAsText(file);
+            }
+            
+            if (!text || text.trim().length < 10) {
+                showToast('Xatolik', 'Fayl bo\'sh yoki juda qisqa', 'error');
+                return null;
+            }
+            
+            showToast('Tahlil qilinmoqda...', 'AI ishlayapti...', 'info');
+            
+            // Analyze with AI
+            const result = await AIService.analyzeText(text, action);
+            
+            if (result) {
+                SoundEngine.play('success');
+                HapticEngine.vibrate('success');
+                return { file: file.name, action, result };
+            } else {
+                showToast('Xatolik', 'Tahlil qilib bo\'lmadi', 'error');
+                return null;
+            }
+            
+        } catch (error) {
+            console.error('File analysis error:', error);
+            showToast('Xatolik', error.message, 'error');
+            return null;
+        }
+    },
+    
+    async generateQuizFromFile() {
+        const analysis = await this.analyzeFile('quiz');
+        if (analysis && analysis.result?.questions) {
+            // Start quiz with these questions
+            AppState.quiz.questions = analysis.result.questions;
+            AppState.quiz.currentQuestion = 0;
+            AppState.quiz.score = 0;
+            AppState.quiz.answers = [];
+            
+            showToast('Quiz tayyor!', `${analysis.file} dan ${analysis.result.questions.length} ta savol`, 'success');
+            showQuizQuestion();
+            return true;
+        }
+        return false;
+    },
+    
+    async generateFlashcardsFromFile() {
+        const analysis = await this.analyzeFile('flashcards');
+        if (analysis && analysis.result?.flashcards) {
+            openFlashcardsModal(analysis.result.flashcards);
+            return true;
+        }
+        return false;
+    },
+    
+    async summarizeFile() {
+        const analysis = await this.analyzeFile('summarize');
+        if (analysis && analysis.result?.text) {
+            openSummaryModal(analysis.result.text, analysis.file);
+            return true;
+        }
+        return false;
+    }
+};
+
+// ===========================================
+// CONFETTI EFFECTS
+// ===========================================
+
+function createConfetti(intensity = 'medium') {
+    const container = document.body;
+    const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+    
+    const counts = { light: 30, medium: 60, heavy: 100 };
+    const count = counts[intensity] || 60;
+    
+    for (let i = 0; i < count; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-particle';
+        confetti.style.cssText = `
+            position: fixed;
+            width: ${Math.random() * 10 + 5}px;
+            height: ${Math.random() * 10 + 5}px;
+            background: ${colors[Math.floor(Math.random() * colors.length)]};
+            left: ${Math.random() * 100}vw;
+            top: -20px;
+            border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+            pointer-events: none;
+            z-index: 10000;
+            animation: confettiFall ${2 + Math.random() * 2}s linear forwards;
+            animation-delay: ${Math.random() * 0.5}s;
+        `;
+        container.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 4000);
+    }
+    
+    SoundEngine.play('achievement');
+    HapticEngine.vibrate('success');
+}
+
+// Add confetti animation CSS
+const confettiStyle = document.createElement('style');
+confettiStyle.textContent = `
+    @keyframes confettiFall {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+`;
+document.head.appendChild(confettiStyle);
+
+// ===========================================
 // ANIMATION CONTROLLER (GSAP)
 // ===========================================
 
@@ -212,7 +588,11 @@ const ANIMATIONS = new AnimationController();
 async function initApp() {
     console.log('🚀 Initializing Nexus Media App...');
     
-    // Load settings first
+    // Initialize engines first
+    SoundEngine.init();
+    HapticEngine.init();
+    
+    // Load settings
     loadSettings();
     
     // Initialize Telegram WebApp
@@ -237,6 +617,7 @@ async function initApp() {
     initRecommendations();
     initQuizOptions();
     initMining();
+    initAIChat();
     
     // Init visual effects from old JS
     initSpotlight();
@@ -313,6 +694,128 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
+}
+
+// ===========================================
+// SETTINGS FUNCTIONS
+// ===========================================
+
+function loadSettings() {
+    const saved = localStorage.getItem('nexus_settings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            AppState.settings = { ...AppState.settings, ...settings };
+        } catch (e) {
+            console.error('Settings load error:', e);
+        }
+    }
+    
+    // Apply settings to UI
+    const soundToggle = document.getElementById('settingSound');
+    const hapticToggle = document.getElementById('settingHaptic');
+    const themeSelect = document.getElementById('settingTheme');
+    
+    if (soundToggle) soundToggle.checked = AppState.settings.sound;
+    if (hapticToggle) hapticToggle.checked = AppState.settings.haptic;
+    if (themeSelect) themeSelect.value = AppState.settings.theme;
+    
+    // Sync with engines
+    SoundEngine.enabled = AppState.settings.sound;
+    HapticEngine.enabled = AppState.settings.haptic;
+}
+
+function toggleSetting(setting) {
+    switch (setting) {
+        case 'sound':
+            AppState.settings.sound = !AppState.settings.sound;
+            SoundEngine.toggle(AppState.settings.sound);
+            if (AppState.settings.sound) {
+                SoundEngine.play('click');
+            }
+            break;
+        case 'haptic':
+            AppState.settings.haptic = !AppState.settings.haptic;
+            HapticEngine.toggle(AppState.settings.haptic);
+            if (AppState.settings.haptic) {
+                HapticEngine.vibrate('medium');
+            }
+            break;
+    }
+    
+    saveSettings();
+    showToast('Sozlamalar', `${setting === 'sound' ? 'Ovoz' : 'Vibratsiya'} ${AppState.settings[setting] ? 'yoqildi' : 'o\'chirildi'}`, 'success');
+}
+
+function changeTheme(theme) {
+    AppState.settings.theme = theme;
+    document.body.setAttribute('data-theme', theme);
+    saveSettings();
+    
+    SoundEngine.play('whoosh');
+    showToast('Mavzu', `${theme.charAt(0).toUpperCase() + theme.slice(1)} mavzusi qo'llanildi`, 'success');
+}
+
+function saveSettings() {
+    localStorage.setItem('nexus_settings', JSON.stringify(AppState.settings));
+}
+
+function clearCache() {
+    if (confirm('Barcha saqlangan ma\'lumotlar o\'chiriladi. Davom etasizmi?')) {
+        localStorage.clear();
+        sessionStorage.clear();
+        showToast('Tozalandi', 'Kesh tozalandi. Sahifa qayta yuklanadi...', 'success');
+        setTimeout(() => location.reload(), 1500);
+    }
+}
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+        SoundEngine.play('whoosh');
+        HapticEngine.vibrate('light');
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// ===========================================
+// FEEDBACK FUNCTIONS
+// ===========================================
+
+function triggerFeedback(type = 'light') {
+    switch (type) {
+        case 'success':
+            SoundEngine.play('success');
+            HapticEngine.vibrate('success');
+            break;
+        case 'error':
+            SoundEngine.play('error');
+            HapticEngine.vibrate('error');
+            break;
+        case 'tap':
+            SoundEngine.play('tap');
+            HapticEngine.vibrate('light');
+            break;
+        case 'coin':
+            SoundEngine.play('coin');
+            HapticEngine.vibrate('light');
+            break;
+        case 'levelup':
+            SoundEngine.play('levelup');
+            HapticEngine.vibrate('heavy');
+            createConfetti('heavy');
+            break;
+        default:
+            SoundEngine.play('click');
+            HapticEngine.vibrate('light');
+    }
 }
 
 // ===========================================
@@ -1573,9 +2076,15 @@ async function startQuiz() {
 }
 
 async function generateQuizQuestions(topic, difficulty, count) {
+    // Determine API base URL (Netlify function or local)
+    const API_BASE = window.location.hostname === 'localhost' 
+        ? 'http://localhost:8888/.netlify/functions'
+        : '/.netlify/functions';
+    
     try {
-        // First try to get questions from our API server
-        const response = await fetch(`http://localhost:8000/generateQuiz`, {
+        console.log('🧠 Generating AI quiz...', { topic, difficulty, count });
+        
+        const response = await fetch(`${API_BASE}/ai-quiz`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1584,91 +2093,69 @@ async function generateQuizQuestions(topic, difficulty, count) {
                 topic: topic || 'general',
                 difficulty: difficulty || 'medium',
                 count: count || 5,
-                user_id: AppState.user?.user_id
+                language: 'uz'
             })
         });
         
         if (response.ok) {
             const data = await response.json();
-            if (data.success && data.questions) {
-                return data.questions;
+            if (data.success && data.quiz?.questions) {
+                console.log('✅ AI Quiz generated:', data.quiz.questions.length, 'questions');
+                triggerFeedback('success');
+                return data.quiz.questions;
             }
         }
+        
+        console.warn('AI Quiz API response not ok, using fallback');
     } catch (error) {
-        console.log('Bot API failed, using fallback:', error);
+        console.warn('AI Quiz API failed, using fallback:', error.message);
     }
     
-    // Fallback to OpenAI API directly
-    try {
-        const openaiKey = 'sk-proj-'; // In production, get from secure config
-        if (openaiKey && openaiKey.length > 10) {
-            const prompt = `Generate ${count} quiz questions in Uzbek language about "${topic}" with ${difficulty} difficulty.
-            
-            Return JSON array with format:
-            [
-                {"question": "Savol matni", "options": ["A", "B", "C", "D"], "correct": 0}
-            ]
-            
-            Make sure:
-            - Questions are educational and engaging
-            - Only one correct answer per question
-            - Options are plausible but clearly wrong
-            - Difficulty is appropriate: ${difficulty}`;
-            
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${openaiKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: 0.7
-                })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const content = data.choices[0].message.content;
-                const questions = JSON.parse(content);
-                return questions.slice(0, count);
-            }
-        }
-    } catch (error) {
-        console.log('OpenAI API failed:', error);
-    }
+    // Fallback - high quality mock questions by topic
+    const mockQuestionsByTopic = {
+        general: [
+            { question: "Quyosh tizimidagi eng katta sayyora qaysi?", options: ["Yer", "Mars", "Yupiter", "Saturn"], correct: 2, explanation: "Yupiter Quyosh tizimidagi eng katta sayyora bo'lib, uning massasi boshqa barcha sayyoralar massasidan 2.5 marta katta." },
+            { question: "Dunyo okeanlaridan qaysi biri eng kattasi?", options: ["Atlantika", "Hind", "Tinch", "Shimoliy Muz"], correct: 2, explanation: "Tinch okeani Yer yuzasining taxminan 30% ni qoplaydi va eng katta okean hisoblanadi." },
+            { question: "Inson tanasidagi eng katta organ qaysi?", options: ["Jigar", "Miya", "Teri", "Yurak"], correct: 2, explanation: "Teri inson tanasidagi eng katta organ bo'lib, kattalar terisining maydoni taxminan 2 kvadrat metrni tashkil etadi." },
+            { question: "Qaysi davlat aholisi eng ko'p?", options: ["AQSH", "Rossiya", "Xitoy", "Hindiston"], correct: 3, explanation: "2023-yildan boshlab Hindiston aholisi Xitoydan o'tib, dunyoda birinchi o'ringa chiqdi." },
+            { question: "Suv qanday haroratda qaynaydi (dengiz sathida)?", options: ["90°C", "100°C", "110°C", "120°C"], correct: 1, explanation: "Toza suv dengiz sathida (1 atmosfera bosimda) 100°C da qaynaydi." }
+        ],
+        science: [
+            { question: "DNK ning to'liq nomi nima?", options: ["Dezoksiribonuklein kislota", "Dinitrogen kislota", "Dihidrogen nukleid", "Dezoksigen nukleotid"], correct: 0, explanation: "DNK - Dezoksiribonuklein kislota, genetik ma'lumotni saqlovchi molekula." },
+            { question: "Yorug'lik vakuumda qanday tezlikda harakat qiladi?", options: ["300,000 km/s", "150,000 km/s", "500,000 km/s", "1,000,000 km/s"], correct: 0, explanation: "Yorug'lik tezligi vakuumda taxminan 299,792 km/s yoki taxminan 300,000 km/s." },
+            { question: "Nyuton qonunlari nechta?", options: ["2", "3", "4", "5"], correct: 1, explanation: "Isaak Nyuton harakat haqida 3 ta asosiy qonunni kashf etgan." },
+            { question: "Atomning markazida nima joylashgan?", options: ["Elektron", "Neytron", "Yadro", "Proton"], correct: 2, explanation: "Atom yadrosida protonlar va neytronlar joylashgan, elektronlar esa yadro atrofida aylanadi." },
+            { question: "Fotosintez jarayonida qaysi gaz ajraladi?", options: ["Karbonat angidrid", "Azot", "Kislorod", "Vodorod"], correct: 2, explanation: "Fotosintez jarayonida o'simliklar karbonat angidridni yutib, kislorod ajratadi." }
+        ],
+        history: [
+            { question: "Birinchi Jahon urushi qachon boshlangan?", options: ["1912", "1914", "1916", "1918"], correct: 1, explanation: "Birinchi Jahon urushi 1914-yil 28-iyulda boshlangan." },
+            { question: "O'zbekiston mustaqilligi qachon e'lon qilindi?", options: ["1990", "1991", "1992", "1993"], correct: 1, explanation: "O'zbekiston Respublikasi mustaqilligi 1991-yil 1-sentabrda e'lon qilindi." },
+            { question: "Amir Temur qachon tug'ilgan?", options: ["1326", "1336", "1346", "1356"], correct: 1, explanation: "Amir Temur 1336-yil 9-aprelda Kesh (hozirgi Shahrisabz) shahrida tug'ilgan." },
+            { question: "Buyuk Ipak yo'li qaysi asrlarda faol bo'lgan?", options: ["Miloddan avvalgi 2-asr - milodiy 15-asr", "Milodiy 5-10 asrlar", "Milodiy 15-20 asrlar", "Miloddan avvalgi 5-1 asrlar"], correct: 0, explanation: "Buyuk Ipak yo'li miloddan avvalgi 2-asrdan milodiy 15-asrgacha faol savdo yo'li bo'lgan." },
+            { question: "Birinchi odamni kosmosga kim uchirgan?", options: ["AQSH", "SSSR", "Xitoy", "Yaponiya"], correct: 1, explanation: "1961-yil 12-aprelda SSSR kosmnavti Yuriy Gagarin birinchi inson sifatida kosmosga uchgan." }
+        ],
+        tech: [
+            { question: "Python dasturlash tilini kim yaratgan?", options: ["Guido van Rossum", "James Gosling", "Bjarne Stroustrup", "Dennis Ritchie"], correct: 0, explanation: "Python tilini Guido van Rossum 1991-yilda yaratgan." },
+            { question: "HTML ning to'liq nomi nima?", options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Logic", "Home Tool Markup Language"], correct: 0, explanation: "HTML - Hyper Text Markup Language, veb-sahifalar yaratish uchun ishlatiladigan til." },
+            { question: "Dunyodagi birinchi kompyuter qaysi?", options: ["ENIAC", "IBM PC", "Apple I", "Commodore 64"], correct: 0, explanation: "ENIAC (1945) birinchi umumiy maqsadli elektron kompyuter hisoblanadi." },
+            { question: "JavaScript qaysi yilda yaratilgan?", options: ["1990", "1995", "2000", "2005"], correct: 1, explanation: "JavaScript 1995-yilda Brendan Eich tomonidan yaratilgan." },
+            { question: "Git versiya nazorat tizimini kim yaratgan?", options: ["Bill Gates", "Linus Torvalds", "Mark Zuckerberg", "Steve Jobs"], correct: 1, explanation: "Git tizimini Linus Torvalds 2005-yilda Linux yadrosini boshqarish uchun yaratgan." }
+        ],
+        math: [
+            { question: "Pi (π) sonining taxminiy qiymati qancha?", options: ["3.14", "2.71", "1.41", "1.61"], correct: 0, explanation: "Pi soni taxminan 3.14159... ga teng, odatda 3.14 deb yaxlitlanadi." },
+            { question: "Fibonachchi ketma-ketligida 1, 1, 2, 3, 5 dan keyin qaysi son keladi?", options: ["6", "7", "8", "9"], correct: 2, explanation: "Fibonachchi ketma-ketligida har bir son oldingi ikki sonning yig'indisiga teng: 3+5=8." },
+            { question: "Kvadrat tenglamaning umumiy ko'rinishi qanday?", options: ["ax + b = 0", "ax² + bx + c = 0", "ax³ + bx² + cx + d = 0", "a/x + b = 0"], correct: 1, explanation: "Kvadrat tenglama ax² + bx + c = 0 ko'rinishida bo'ladi, bu yerda a ≠ 0." },
+            { question: "1 dan 100 gacha sonlar yig'indisi qancha?", options: ["5000", "5050", "5100", "5500"], correct: 1, explanation: "Gauss formulasi bo'yicha: n(n+1)/2 = 100×101/2 = 5050." },
+            { question: "Logarifm asosi 10 bo'lsa, u qanday ataladi?", options: ["Natural logarifm", "O'nli logarifm", "Ikkilik logarifm", "Eksponent logarifm"], correct: 1, explanation: "Asosi 10 bo'lgan logarifm o'nli (decimal) logarifm deyiladi va lg bilan belgilanadi." }
+        ]
+    };
     
-    // Final fallback - mock questions
-    const mockQuestions = [
-        {
-            question: "Quyosh tizimidagi eng katta sayyora qaysi?",
-            options: ["Yer", "Mars", "Yupiter", "Saturn"],
-            correct: 2
-        },
-        {
-            question: "Python dasturlash tilini kim yaratgan?",
-            options: ["Guido van Rossum", "James Gosling", "Bjarne Stroustrup", "Dennis Ritchie"],
-            correct: 0
-        },
-        {
-            question: "O'zbekiston mustaqilligi qachon e'lon qilindi?",
-            options: ["1990", "1991", "1992", "1993"],
-            correct: 1
-        },
-        {
-            question: "Dunyo okeanlaridan qaysi biri eng kattasi?",
-            options: ["Atlantika", "Hind", "Tinch", "Shimoliy Muz"],
-            correct: 2
-        },
-        {
-            question: "Inson tanasidagi eng katta organ qaysi?",
-            options: ["Jigar", "Miya", "Teri", "Yurak"],
-            correct: 2
-        }
-    ];
+    // Get questions for the topic or use general
+    const topicQuestions = mockQuestionsByTopic[topic] || mockQuestionsByTopic.general;
     
-    return mockQuestions.slice(0, Math.min(count, mockQuestions.length));
+    // Shuffle and return requested count
+    const shuffled = [...topicQuestions].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
 function showQuizQuestion() {
@@ -1862,6 +2349,194 @@ function regenerateEnergy() {
     if (balanceEl && AppState.mining.autoTapRate > 0) {
         balanceEl.textContent = formatNumber(Math.floor(AppState.mining.balance));
     }
+}
+
+// ===========================================
+// AI CHAT SYSTEM
+// ===========================================
+
+let chatHistory = [];
+
+function initAIChat() {
+    const chatInput = document.getElementById('aiChatInput');
+    const chatSend = document.getElementById('aiChatSend');
+    
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendAIMessage();
+            }
+        });
+    }
+    
+    if (chatSend) {
+        chatSend.addEventListener('click', sendAIMessage);
+    }
+}
+
+async function sendAIMessage() {
+    const input = document.getElementById('aiChatInput');
+    const messagesContainer = document.getElementById('aiChatMessages');
+    
+    if (!input || !messagesContainer) return;
+    
+    const message = input.value.trim();
+    if (!message) return;
+    
+    // Clear input
+    input.value = '';
+    
+    // Add user message to UI
+    addChatMessage(message, 'user');
+    
+    // Add to history
+    chatHistory.push({ role: 'user', content: message });
+    
+    // Show typing indicator
+    const typingId = showTypingIndicator();
+    
+    try {
+        // Get AI response
+        const response = await AIService.chat(message, chatHistory, 'tutor');
+        
+        // Remove typing indicator
+        removeTypingIndicator(typingId);
+        
+        // Add AI response to UI
+        addChatMessage(response, 'ai');
+        
+        // Add to history
+        chatHistory.push({ role: 'assistant', content: response });
+        
+        // Keep history manageable
+        if (chatHistory.length > 20) {
+            chatHistory = chatHistory.slice(-20);
+        }
+        
+        SoundEngine.play('notify');
+        
+    } catch (error) {
+        removeTypingIndicator(typingId);
+        addChatMessage('Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko\'ring.', 'ai');
+    }
+}
+
+function addChatMessage(text, sender) {
+    const container = document.getElementById('aiChatMessages');
+    if (!container) return;
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = `chat-message ${sender}-message`;
+    messageEl.innerHTML = `
+        <div class="message-avatar">
+            ${sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>'}
+        </div>
+        <div class="message-content">
+            <div class="message-text">${escapeHtml(text)}</div>
+            <div class="message-time">${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+    `;
+    
+    container.appendChild(messageEl);
+    container.scrollTop = container.scrollHeight;
+}
+
+function showTypingIndicator() {
+    const container = document.getElementById('aiChatMessages');
+    if (!container) return null;
+    
+    const id = 'typing-' + Date.now();
+    const typingEl = document.createElement('div');
+    typingEl.id = id;
+    typingEl.className = 'chat-message ai-message typing';
+    typingEl.innerHTML = `
+        <div class="message-avatar"><i class="fas fa-robot"></i></div>
+        <div class="message-content">
+            <div class="typing-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(typingEl);
+    container.scrollTop = container.scrollHeight;
+    return id;
+}
+
+function removeTypingIndicator(id) {
+    if (id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function openAIChatModal() {
+    const modal = document.getElementById('aiChatModal');
+    if (modal) {
+        modal.classList.add('active');
+        const input = document.getElementById('aiChatInput');
+        if (input) input.focus();
+    }
+}
+
+function closeAIChatModal() {
+    const modal = document.getElementById('aiChatModal');
+    if (modal) modal.classList.remove('active');
+}
+
+// ===========================================
+// FILE ANALYSIS MODALS
+// ===========================================
+
+function openSummaryModal(text, fileName) {
+    const modal = document.getElementById('summaryModal');
+    if (!modal) {
+        // Create modal dynamically
+        showToast('Xulosa', text.substring(0, 200) + '...', 'success');
+        return;
+    }
+    
+    document.getElementById('summaryFileName').textContent = fileName;
+    document.getElementById('summaryContent').textContent = text;
+    modal.classList.add('active');
+}
+
+function openFlashcardsModal(flashcards) {
+    const modal = document.getElementById('flashcardsModal');
+    if (!modal) {
+        showToast('Flashcards', `${flashcards.length} ta kartochka yaratildi`, 'success');
+        return;
+    }
+    
+    const container = document.getElementById('flashcardsContainer');
+    container.innerHTML = flashcards.map((card, i) => `
+        <div class="flashcard" onclick="flipFlashcard(this)">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <div class="flashcard-number">${i + 1}/${flashcards.length}</div>
+                    <div class="flashcard-text">${escapeHtml(card.front)}</div>
+                </div>
+                <div class="flashcard-back">
+                    <div class="flashcard-text">${escapeHtml(card.back)}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    modal.classList.add('active');
+}
+
+function flipFlashcard(el) {
+    el.classList.toggle('flipped');
+    SoundEngine.play('pop');
+    HapticEngine.vibrate('light');
 }
 
 // ===========================================

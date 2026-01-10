@@ -254,6 +254,22 @@
                         <div class="function-name">Live Battle</div>
                         <div class="function-desc">Jonli musobaqa</div>
                     </div>
+                    
+                    <div class="function-card glow-card" onclick="openModal('fileAnalysisModal')" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(6, 182, 212, 0.15));">
+                        <div class="function-icon" style="color: var(--accent-purple);">
+                            <i class="fas fa-file-upload"></i>
+                        </div>
+                        <div class="function-name">Fayl Tahlili</div>
+                        <div class="function-desc">AI bilan tahlil qilish</div>
+                    </div>
+                    
+                    <div class="function-card" onclick="openModal('flashcardsModal')">
+                        <div class="function-icon">
+                            <i class="fas fa-clone"></i>
+                        </div>
+                        <div class="function-name">Flashcards</div>
+                        <div class="function-desc">Eslab qolish kartochkalari</div>
+                    </div>
                 </div>
                 
                 <!-- Quick Actions Hub -->
@@ -1359,7 +1375,132 @@
         </div>
     </div>
 
-        <!-- Toast Container -->
+    <!-- AI Chat Modal -->
+    <div class="modal-overlay" id="aiChatModal">
+        <div class="modal" style="height: 80vh; max-height: 600px; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-robot" style="color: var(--accent-cyan);"></i>
+                    NEXUS AI Tutor
+                </div>
+                <button class="modal-close" onclick="closeAIChatModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; padding: 0;">
+                <div id="aiChatMessages" class="ai-chat-messages" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Welcome message -->
+                    <div class="chat-message ai-message">
+                        <div class="message-avatar"><i class="fas fa-robot"></i></div>
+                        <div class="message-content">
+                            <div class="message-text">Salom! Men NEXUS AI Tutor man. Sizga o'rganishda yordam beraman. Savol bering! 🚀</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ai-chat-input-container" style="padding: 16px; border-top: 1px solid var(--border-subtle); display: flex; gap: 10px;">
+                    <input type="text" id="aiChatInput" class="glass-input" placeholder="Savolingizni yozing..." style="flex: 1;">
+                    <button id="aiChatSend" class="premium-cta" style="width: auto; padding: 12px 20px;">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Analysis Modal -->
+    <div class="modal-overlay" id="fileAnalysisModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-file-alt" style="color: var(--accent-purple);"></i>
+                    Fayl Tahlili
+                </div>
+                <button class="modal-close" onclick="closeModal('fileAnalysisModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="file-analysis-options">
+                    <div class="analysis-option glass-card glow-card" onclick="FileAnalyzer.summarizeFile()">
+                        <div class="option-icon"><i class="fas fa-compress-alt"></i></div>
+                        <div class="option-info">
+                            <div class="option-title">Xulosa</div>
+                            <div class="option-desc">Matnni qisqacha xulosa qilish</div>
+                        </div>
+                    </div>
+                    <div class="analysis-option glass-card" onclick="FileAnalyzer.generateQuizFromFile()">
+                        <div class="option-icon"><i class="fas fa-question-circle"></i></div>
+                        <div class="option-info">
+                            <div class="option-title">Quiz yaratish</div>
+                            <div class="option-desc">Matn asosida test savollari</div>
+                        </div>
+                    </div>
+                    <div class="analysis-option glass-card" onclick="FileAnalyzer.generateFlashcardsFromFile()">
+                        <div class="option-icon"><i class="fas fa-clone"></i></div>
+                        <div class="option-info">
+                            <div class="option-title">Flashcards</div>
+                            <div class="option-desc">Eslab qolish uchun kartochkalar</div>
+                        </div>
+                    </div>
+                    <div class="analysis-option glass-card" onclick="FileAnalyzer.analyzeFile('explain')">
+                        <div class="option-icon"><i class="fas fa-book-open"></i></div>
+                        <div class="option-info">
+                            <div class="option-title">Tushuntirish</div>
+                            <div class="option-desc">Murakkab matnni sodda qilish</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="supported-formats" style="text-align: center; margin-top: 20px; color: var(--text-muted); font-size: 0.8rem;">
+                    <i class="fas fa-info-circle"></i> Qo'llab-quvvatlanadigan formatlar: TXT, MD, DOC
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Modal -->
+    <div class="modal-overlay" id="summaryModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-file-alt"></i>
+                    <span id="summaryFileName">Xulosa</span>
+                </div>
+                <button class="modal-close" onclick="closeModal('summaryModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="summary-content glass-card" id="summaryContent" style="white-space: pre-wrap; line-height: 1.6;">
+                    Xulosa yuklanmoqda...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Button -->
+    <button class="floating-ai-btn" onclick="openAIChatModal()" style="
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    ">
+        <i class="fas fa-robot"></i>
+    </button>
+
+    <!-- Toast Container -->
     <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;"></div>
 
     <!-- Main Script -->
