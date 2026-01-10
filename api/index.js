@@ -2,7 +2,7 @@
 // Simple API for WebApp functionality
 
 // AI Quiz Endpoint
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleAIQuiz(req, res) {
+function handleAIQuiz(req, res) {
   const { topic, difficulty, count } = req.body;
   
   // Mock quiz data
@@ -59,7 +59,7 @@ async function handleAIQuiz(req, res) {
   res.json({ questions: result });
 }
 
-async function handleFileAnalysis(req, res) {
+function handleFileAnalysis(req, res) {
   // Mock file analysis
   res.json({
     summary: "This is a mock analysis of your file. The content appears to be well-structured and informative.",
@@ -70,12 +70,12 @@ async function handleFileAnalysis(req, res) {
   });
 }
 
-async function handleUserSave(req, res) {
+function handleUserSave(req, res) {
   // Mock user save
   res.json({ success: true, message: "User data saved successfully" });
 }
 
-async function handleUserLoad(req, res) {
+function handleUserLoad(req, res) {
   // Mock user load
   res.json({
     user: {
