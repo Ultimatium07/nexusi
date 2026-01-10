@@ -1046,6 +1046,81 @@ class QuantumAI {
     }
 }
 
+// 🎯 QUANTUM APP INITIALIZER
+const QuantumApp = {
+    core: new QuantumCore(),
+    ui: new QuantumUI(),
+    mining: new QuantumMining(),
+    ai: new QuantumAI(),
+    
+    init() {
+        // Initialize all systems
+        this.ui.init();
+        this.mining.init();
+        this.ai.init();
+        
+        // Load saved data
+        this.loadGameData();
+        
+        // Start game loops
+        this.startGameLoops();
+        
+        // Update UI
+        this.ui.updateBalance(QuantumState.mining.balance);
+        this.ui.updateXP(QuantumState.user.xp);
+        this.ui.updateGold(QuantumState.user.gold);
+        this.ui.updateEnergy(QuantumState.user.energy);
+        this.ui.updateLevel(QuantumState.user.level);
+        
+        // Hide loader
+        setTimeout(() => {
+            const loader = document.getElementById('quantumLoader');
+            if (loader) {
+                loader.style.display = 'none';
+            }
+        }, 2000);
+    },
+    
+    loadGameData() {
+        const savedUser = localStorage.getItem('quantumUser');
+        const savedMining = localStorage.getItem('quantumMining');
+        
+        if (savedUser) {
+            Object.assign(QuantumState.user, JSON.parse(savedUser));
+        }
+        
+        if (savedMining) {
+            Object.assign(QuantumState.mining, JSON.parse(savedMining));
+        }
+    },
+    
+    saveGameData() {
+        localStorage.setItem('quantumUser', JSON.stringify(QuantumState.user));
+        localStorage.setItem('quantumMining', JSON.stringify(QuantumState.mining));
+    },
+    
+    startGameLoops() {
+        // Energy regeneration
+        setInterval(() => {
+            if (QuantumState.user.energy < QuantumState.user.maxEnergy) {
+                QuantumState.user.energy = Math.min(
+                    QuantumState.user.energy + 1,
+                    QuantumState.user.maxEnergy
+                );
+                this.ui.updateEnergy(QuantumState.user.energy);
+            }
+        }, 1000);
+        
+        // Auto-save
+        setInterval(() => {
+            this.saveGameData();
+        }, 30000);
+        
+        // Auto-mining
+        this.mining.startAutoMining();
+    }
+};
+
 // 🎯 Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => QuantumApp.init());
