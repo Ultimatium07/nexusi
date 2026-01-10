@@ -1,967 +1,787 @@
 /* ============================================
-   NEXUS MEDIA - ULTIMATE V2 JAVASCRIPT
-   Professional Business Application
+   NEXUS MEDIA - ULTIMATE WEBAPP JS
+   Full Functional Implementation
    ============================================ */
 
-// ===========================================
+// ============================================
 // CONFIGURATION
-// ===========================================
-
+// ============================================
 const CONFIG = {
     ADMIN_IDS: [5895125141],
     BOT_USERNAME: 'PolWay_bot',
     SUPABASE_URL: 'https://slmynfgspupncsijhzpd.supabase.co',
     SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsbXluZmdzcHVwbmNzaWpoenBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3Nzk1MTEsImV4cCI6MjA4MzM1NTUxMX0.HY8ZiQkWMRRA0jVMutTorc5Cc2zt1x38dalot-A_gLI',
-    
-    // Quiz Limits
-    QUIZ_LIMITS: {
-        free: 10,
-        premium: 100,
-        exclusive: 999
-    },
-    
-    // Premium Prices (in UZS) - Updated
-    PREMIUM_PRICES: {
-        premium_week: 12990,
-        premium_month: 24990,
-        exclusive_week: 14990,
-        exclusive_month: 34990,
-        exclusive_pro_plus_1: 9990
-    },
-    
-    // Payment Card
-    PAYMENT_CARD: '9860 1766 2113 5019',
-    PAYMENT_HOLDER: "Asadbek O'sarov",
-    
-    // Energy
-    MAX_ENERGY: 1000,
+    OPENAI_KEY: '', // Server-side usage only
     ENERGY_REGEN_RATE: 1,
-    TAP_COST: 1
+    ENERGY_REGEN_INTERVAL: 1000,
+    AUTO_SAVE_INTERVAL: 30000,
+    PRESTIGE_THRESHOLD: 100000,
+    XP_PREMIUM_COST: 10000,
+    GOLD_PREMIUM_COST: 50000,
+    GOLD_PREMIUM_DAYS: 3,
+    REFERRAL_REWARD_XP: 500,
+    REFERRAL_INVITER_GOLD: 1000,
+    SUPPORT_USERNAME: 'iultimatium'
 };
 
-// ===========================================
-// AI SERVICE - OpenAI Integration
-// ===========================================
+// ============================================
+// INTERACTIVITY MANAGER
+// ============================================
+function handleButtonClick(action, element) {
+    // 1. Haptic Feedback
+    haptic('light');
 
-const AIService = {
-    API_BASE: window.location.hostname === 'localhost' 
-        ? 'http://localhost:3000/api'
-        : '/api',
-    
-    async generateQuiz(topic, difficulty, count) {
-        try {
-            const response = await fetch(`${this.API_BASE}/ai-quiz`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic, difficulty, count, language: 'uz' })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                return data.success ? data.quiz : null;
-            }
-        } catch (error) {
-            console.error('AI Quiz error:', error);
-        }
-        return null;
-    },
-    
-    async analyzeText(text, action, options = {}) {
-        try {
-            const response = await fetch(`${this.API_BASE}/analyze-text`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, action, options })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                return data.success ? data.result : null;
-            }
-        } catch (error) {
-            console.error('Text analysis error:', error);
-        }
-        return null;
-    },
-    
-    async chat(message, context = [], mode = 'tutor') {
-        try {
-            const response = await fetch(`${this.API_BASE}/ai-chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, context, mode })
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                return data.success ? data.reply : data.reply || "Xatolik yuz berdi";
-            }
-        } catch (error) {
-            console.error('AI Chat error:', error);
-        }
-        return "Kechirasiz, hozir javob bera olmayapman.";
+    // 2. Visual Feedback
+    if (element) {
+        element.classList.add('active-click');
+        setTimeout(() => element.classList.remove('active-click'), 150);
     }
-};
 
-// ===========================================
-// SOUND ENGINE - Audio Effects
-// ===========================================
-
-const SoundEngine = {
-    enabled: true,
-    volume: 0.5,
-    sounds: {},
-    
-    // Sound URLs (using free sound effects)
-    soundUrls: {
-        tap: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-        success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
-        error: 'https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3',
-        levelup: 'https://assets.mixkit.co/active_storage/sfx/1997/1997-preview.mp3',
-        coin: 'https://assets.mixkit.co/active_storage/sfx/888/888-preview.mp3',
-        achievement: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
-        click: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-        whoosh: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3',
-        pop: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-        notify: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
-    },
-    
-    init() {
-        // Preload sounds
-        Object.entries(this.soundUrls).forEach(([name, url]) => {
-            const audio = new Audio();
-            audio.preload = 'auto';
-            audio.volume = this.volume;
-            audio.src = url;
-            this.sounds[name] = audio;
-        });
-        
-        // Load settings
-        const savedSettings = localStorage.getItem('nexus_sound_settings');
-        if (savedSettings) {
-            const settings = JSON.parse(savedSettings);
-            this.enabled = settings.enabled !== false;
-            this.volume = settings.volume || 0.5;
-        }
-        
-        console.log('🔊 Sound Engine initialized');
-    },
-    
-    play(soundName) {
-        if (!this.enabled) return;
-        
-        const sound = this.sounds[soundName];
-        if (sound) {
-            sound.currentTime = 0;
-            sound.volume = this.volume;
-            sound.play().catch(() => {}); // Ignore autoplay errors
-        }
-    },
-    
-    setVolume(vol) {
-        this.volume = Math.max(0, Math.min(1, vol));
-        Object.values(this.sounds).forEach(s => s.volume = this.volume);
-        this.saveSettings();
-    },
-    
-    toggle(enabled) {
-        this.enabled = enabled;
-        this.saveSettings();
-    },
-    
-    saveSettings() {
-        localStorage.setItem('nexus_sound_settings', JSON.stringify({
-            enabled: this.enabled,
-            volume: this.volume
-        }));
-    }
-};
-
-// ===========================================
-// HAPTIC FEEDBACK
-// ===========================================
-
-const HapticEngine = {
-    enabled: true,
-    
-    init() {
-        const saved = localStorage.getItem('nexus_haptic_enabled');
-        this.enabled = saved !== 'false';
-    },
-    
-    vibrate(pattern = 'light') {
-        if (!this.enabled) return;
-        
-        // Telegram WebApp haptic
-        if (window.Telegram?.WebApp?.HapticFeedback) {
-            const tgHaptic = window.Telegram.WebApp.HapticFeedback;
-            switch (pattern) {
-                case 'light':
-                    tgHaptic.impactOccurred('light');
-                    break;
-                case 'medium':
-                    tgHaptic.impactOccurred('medium');
-                    break;
-                case 'heavy':
-                    tgHaptic.impactOccurred('heavy');
-                    break;
-                case 'success':
-                    tgHaptic.notificationOccurred('success');
-                    break;
-                case 'error':
-                    tgHaptic.notificationOccurred('error');
-                    break;
-                case 'warning':
-                    tgHaptic.notificationOccurred('warning');
-                    break;
-                default:
-                    tgHaptic.impactOccurred('light');
-            }
-            return;
-        }
-        
-        // Fallback to Navigator vibrate API
-        if (navigator.vibrate) {
-            switch (pattern) {
-                case 'light':
-                    navigator.vibrate(10);
-                    break;
-                case 'medium':
-                    navigator.vibrate(25);
-                    break;
-                case 'heavy':
-                    navigator.vibrate(50);
-                    break;
-                case 'success':
-                    navigator.vibrate([20, 50, 20]);
-                    break;
-                case 'error':
-                    navigator.vibrate([50, 30, 50, 30, 50]);
-                    break;
-                default:
-                    navigator.vibrate(15);
-            }
-        }
-    },
-    
-    toggle(enabled) {
-        this.enabled = enabled;
-        localStorage.setItem('nexus_haptic_enabled', enabled);
-    }
-};
-
-// ===========================================
-// FILE UPLOAD & ANALYSIS
-// ===========================================
-
-const FileAnalyzer = {
-    maxFileSize: 5 * 1024 * 1024, // 5MB
-    supportedTypes: ['.txt', '.pdf', '.doc', '.docx', '.md'],
-    
-    async openFilePicker() {
-        return new Promise((resolve) => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.txt,.pdf,.doc,.docx,.md,text/*';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    resolve(file);
-                } else {
-                    resolve(null);
-                }
-            };
-            input.click();
-        });
-    },
-    
-    async readFileAsText(file) {
-        return new Promise((resolve, reject) => {
-            if (file.size > this.maxFileSize) {
-                reject(new Error('Fayl juda katta (max 5MB)'));
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Faylni o\'qib bo\'lmadi'));
-            reader.readAsText(file);
-        });
-    },
-    
-    async analyzeFile(action = 'summarize') {
-        try {
-            showToast('Fayl tanlang', 'Tahlil qilish uchun fayl tanlang', 'info');
-            
-            const file = await this.openFilePicker();
-            if (!file) return null;
-            
-            showToast('Yuklanmoqda...', file.name, 'info');
-            
-            // Read file content
-            let text;
-            if (file.type === 'application/pdf') {
-                // For PDF, we'd need a PDF.js library - for now show message
-                showToast('PDF', 'PDF fayllar yaqinda qo\'llab-quvvatlanadi', 'warning');
-                return null;
-            } else {
-                text = await this.readFileAsText(file);
-            }
-            
-            if (!text || text.trim().length < 10) {
-                showToast('Xatolik', 'Fayl bo\'sh yoki juda qisqa', 'error');
-                return null;
-            }
-            
-            showToast('Tahlil qilinmoqda...', 'AI ishlayapti...', 'info');
-            
-            // Analyze with AI
-            const result = await AIService.analyzeText(text, action);
-            
-            if (result) {
-                SoundEngine.play('success');
-                HapticEngine.vibrate('success');
-                return { file: file.name, action, result };
-            } else {
-                showToast('Xatolik', 'Tahlil qilib bo\'lmadi', 'error');
-                return null;
-            }
-            
-        } catch (error) {
-            console.error('File analysis error:', error);
-            showToast('Xatolik', error.message, 'error');
-            return null;
-        }
-    },
-    
-    async generateQuizFromFile() {
-        const analysis = await this.analyzeFile('quiz');
-        if (analysis && analysis.result?.questions) {
-            // Start quiz with these questions
-            AppState.quiz.questions = analysis.result.questions;
-            AppState.quiz.currentQuestion = 0;
-            AppState.quiz.score = 0;
-            AppState.quiz.answers = [];
-            
-            showToast('Quiz tayyor!', `${analysis.file} dan ${analysis.result.questions.length} ta savol`, 'success');
-            showQuizQuestion();
-            return true;
-        }
-        return false;
-    },
-    
-    async generateFlashcardsFromFile() {
-        const analysis = await this.analyzeFile('flashcards');
-        if (analysis && analysis.result?.flashcards) {
-            openFlashcardsModal(analysis.result.flashcards);
-            return true;
-        }
-        return false;
-    },
-    
-    async summarizeFile() {
-        const analysis = await this.analyzeFile('summarize');
-        if (analysis && analysis.result?.text) {
-            openSummaryModal(analysis.result.text, analysis.file);
-            return true;
-        }
-        return false;
-    }
-};
-
-// ===========================================
-// CONFETTI EFFECTS
-// ===========================================
-
-function createConfetti(intensity = 'medium') {
-    const container = document.body;
-    const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
-    
-    const counts = { light: 30, medium: 60, heavy: 100 };
-    const count = counts[intensity] || 60;
-    
-    for (let i = 0; i < count; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti-particle';
-        confetti.style.cssText = `
-            position: fixed;
-            width: ${Math.random() * 10 + 5}px;
-            height: ${Math.random() * 10 + 5}px;
-            background: ${colors[Math.floor(Math.random() * colors.length)]};
-            left: ${Math.random() * 100}vw;
-            top: -20px;
-            border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
-            pointer-events: none;
-            z-index: 10000;
-            animation: confettiFall ${2 + Math.random() * 2}s linear forwards;
-            animation-delay: ${Math.random() * 0.5}s;
-        `;
-        container.appendChild(confetti);
-        
-        setTimeout(() => confetti.remove(), 4000);
-    }
-    
-    SoundEngine.play('achievement');
-    HapticEngine.vibrate('success');
+    // 3. Log Action
+    console.log(`User clicked: ${action}`);
 }
 
-// Add confetti animation CSS
-const confettiStyle = document.createElement('style');
-confettiStyle.textContent = `
-    @keyframes confettiFall {
-        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-        100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+// Initialize Visual Effects
+function initVisualEffects() {
+    // 1. Vanilla Tilt (3D Cards)
+    if (window.VanillaTilt) {
+        VanillaTilt.init(document.querySelectorAll(".mining-card, .profile-header, .premium-status-card"), {
+            max: 5,
+            speed: 400,
+            glare: true,
+            "max-glare": 0.2,
+            gyroscope: true
+        });
     }
-`;
-document.head.appendChild(confettiStyle);
 
-// ===========================================
-// ANIMATION CONTROLLER (GSAP)
-// ===========================================
+    // 2. Glitch Effect on Title
+    const title = document.querySelector('.loader-text');
+    if (title) {
+        title.classList.add('glitch-text');
+        title.setAttribute('data-text', title.textContent);
+    }
+}
 
-class AnimationController {
+// Rolling Number Animation
+function animateNumber(elementId, endValue) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    if (window.CountUp) {
+        const countUp = new CountUp(elementId, endValue, {
+            duration: 1.5,
+            separator: ' ',
+        });
+        if (!countUp.error) {
+            countUp.start();
+        } else {
+            element.textContent = formatNumber(endValue);
+        }
+    } else {
+        element.textContent = formatNumber(endValue);
+    }
+}
+
+// Reactor Shockwave
+function createShockwave(x, y) {
+    const wave = document.createElement('div');
+    wave.className = 'shockwave';
+    wave.style.left = x + 'px';
+    wave.style.top = y + 'px';
+    document.querySelector('.mining-card').appendChild(wave);
+    setTimeout(() => wave.remove(), 600);
+}
+
+// ============================================
+// STATE MANAGER
+// ============================================
+class StateManager {
     constructor() {
-        this.isReady = false;
-        if (window.gsap) {
-            gsap.registerPlugin(ScrollTrigger, TextPlugin);
-            this.isReady = true;
-            console.log('GSAP Animation Engine Ready');
+        this.state = this.loadState();
+        this.subscribers = [];
+    }
+
+    getDefaultState() {
+        return {
+            user: { id: 0, name: 'Foydalanuvchi', username: '', isPremium: false, isAdmin: false, referralCode: null, referralsCount: 0, referredBy: null },
+            gold: 0,
+            xp: 0,
+            level: 1,
+            energy: 1000,
+            maxEnergy: 1000,
+            tapPower: 1,
+            autoTapRate: 0,
+            critChance: 5,
+            critMultiplier: 2,
+            streak: 0,
+            lastActive: null,
+            totalTaps: 0,
+            totalGoldEarned: 0,
+            prestigeLevel: 0,
+            darkMatter: 0,
+            upgrades: { tapPower: 0, autoTap: 0, energy: 0, crit: 0, luck: 0 },
+            achievements: [],
+            dailyChallenges: [],
+            lastChallengeReset: null,
+            quizStats: { total: 0, correct: 0, streak: 0 },
+            settings: { sound: true, haptic: true, theme: 'default' },
+            notifications: [],
+            gameCoins: 0,
+            rpgGold: 0,
+            accumulatedCoins: 0,
+            activeEffects: [],
+            ownedSkins: ['skin_default'],
+            currentSkin: 'skin_default',
+            offlineMode: false // Added Offline Mode Flag
+        };
+    }
+
+    loadState() {
+        try {
+            const saved = localStorage.getItem('nexus_state');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return { ...this.getDefaultState(), ...parsed };
+            }
+        } catch (e) {
+            console.error('State load error:', e);
+        }
+        return this.getDefaultState();
+    }
+
+    saveState() {
+        try {
+            localStorage.setItem('nexus_state', JSON.stringify(this.state));
+        } catch (e) {
+            console.error('State save error:', e);
         }
     }
 
-    // Intro Sequence
-    playIntro() {
-        if (!this.isReady) return;
-        
-        const tl = gsap.timeline();
-        
-        tl.to('#loader', {
-            opacity: 0,
-            duration: 0.8,
-            ease: 'power2.inOut',
-            onComplete: () => document.getElementById('loader').classList.add('hidden')
-        })
-        .from('.app-header', {
-            y: -50,
-            opacity: 0,
-            duration: 0.6,
-            ease: 'back.out(1.7)'
-        }, '-=0.4')
-        .from('.recommendation-card', {
-            x: 100,
-            opacity: 0,
-            duration: 0.8,
-            stagger: 0.1,
-            ease: 'power3.out'
-        }, '-=0.4')
-        .from('.stats-grid .stat-card', {
-            y: 30,
-            opacity: 0,
-            duration: 0.5,
-            stagger: 0.05,
-            ease: 'back.out(1.2)'
-        }, '-=0.6')
-        .from('.function-card', {
-            scale: 0.8,
-            opacity: 0,
-            duration: 0.5,
-            stagger: 0.05,
-            ease: 'back.out(1.5)'
-        }, '-=0.4');
+    get(key) {
+        return this.state[key];
     }
 
-    // Section Transition
-    switchSection(oldSectionId, newSectionId) {
-        if (!this.isReady) return;
-        
-        const oldSection = document.getElementById(oldSectionId);
-        const newSection = document.getElementById(newSectionId);
-        
-        if (oldSection) {
-            gsap.to(oldSection, {
-                opacity: 0,
-                y: -20,
-                duration: 0.3,
-                onComplete: () => oldSection.classList.add('hidden')
+    set(key, value) {
+        this.state[key] = value;
+        this.notify();
+        this.saveState();
+    }
+
+    update(updates) {
+        Object.assign(this.state, updates);
+        this.notify();
+        this.saveState();
+    }
+
+    subscribe(fn) {
+        this.subscribers.push(fn);
+    }
+
+    notify() {
+        this.subscribers.forEach(fn => fn(this.state));
+    }
+}
+
+async function incrementInviterRewards(inviterId, xpGain, goldGain) {
+    if (state.get('offlineMode')) return; // Skip if offline
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('users')
+            .select('xp,gold,referrals_count')
+            .eq('id', inviterId)
+            .maybeSingle();
+        if (error) throw error;
+        const currentXp = data?.xp ?? 0;
+        const currentGold = data?.gold ?? 0;
+        const currentReferrals = data?.referrals_count ?? 0;
+        const updatePayload = {
+            xp: currentXp + xpGain,
+            gold: currentGold + goldGain,
+            referrals_count: currentReferrals + 1
+        };
+        await supabaseClient.from('users')
+            .update(updatePayload)
+            .eq('id', inviterId);
+        if (inviterId === supabaseUserId) {
+            state.update({
+                xp: updatePayload.xp,
+                gold: updatePayload.gold,
+                user: { ...state.get('user'), referralsCount: updatePayload.referrals_count }
             });
         }
-        
-        if (newSection) {
-            newSection.classList.remove('hidden');
-            gsap.fromTo(newSection, 
-                { opacity: 0, y: 20 },
-                { opacity: 1, y: 0, duration: 0.4, delay: 0.1, ease: 'power2.out' }
-            );
-            
-            // Stagger children for premium feel
-            const children = newSection.querySelectorAll('.glass-card, .function-card, .media-card-item');
-            if (children.length > 0) {
-                gsap.fromTo(children,
-                    { opacity: 0, y: 20 },
-                    { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, delay: 0.2, ease: 'power2.out' }
-                );
-            }
-        }
+    } catch (err) {
+        console.error('incrementInviterRewards error', err);
+    }
+}
+
+const state = new StateManager();
+
+// ============================================
+// SUPABASE INTEGRATION
+// ============================================
+let supabaseClient = null;
+let supabaseUserId = null;
+let supabaseSyncEnabled = false;
+let supabaseSyncTimer = null;
+let supabaseLatestState = null;
+let suppressSupabaseSync = false;
+let premiumSyncInFlight = false;
+let pendingReferralCode = null;
+let referralRewarded = false;
+
+function generateReferralCode(uid) {
+    return `NXS${uid || Math.floor(Math.random() * 999999)}`;
+}
+
+function getReferralLink(code) {
+    // Bot expects 'ref_' prefix followed by user ID for referrals
+    const ref = code || state.get('user')?.id;
+    if (!ref) return `https://t.me/${CONFIG.BOT_USERNAME}`;
+    return `https://t.me/${CONFIG.BOT_USERNAME}?start=ref_${ref}`;
+}
+
+async function bootstrapSupabase() {
+    // 1. Check if Supabase SDK is loaded
+    if (!window.supabase) {
+        console.warn('Supabase SDK not loaded. Enable Offline Mode.');
+        enableOfflineMode();
+        return;
     }
 
-    // Number Rolling Animation
-    animateNumber(elementId, endValue, duration = 1) {
-        if (!this.isReady) {
-            const el = document.getElementById(elementId);
-            if (el) el.textContent = formatNumber(endValue);
+    // 2. Check Configuration
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY || CONFIG.SUPABASE_URL.includes('YOUR_SUPABASE')) {
+        console.warn('Supabase config missing. Enable Offline Mode.');
+        enableOfflineMode();
+        return;
+    }
+
+    // 3. Initialize Client
+    try {
+        if (!supabaseClient) {
+            supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+            console.log('Supabase client initialized');
+        }
+    } catch (err) {
+        console.error('Supabase client init failed', err);
+        enableOfflineMode();
+        return;
+    }
+
+    // 4. Check User ID
+    const uid = state.get('user')?.id;
+    if (!uid) {
+        console.warn('User ID missing (0). Enable Offline Mode until login.');
+        // Don't fully enable offline mode here, just don't sync yet.
+        // Wait for Telegram params to provide ID.
+        return;
+    }
+
+    supabaseUserId = uid;
+
+    // 5. Start Sync
+    try {
+        await ensureSupabaseRecords(uid);
+        await loadSupabaseState(uid);
+        supabaseSyncEnabled = true;
+        state.subscribe(scheduleSupabaseSync);
+        scheduleSupabaseSync(state.state);
+        await handlePendingReferral();
+        console.log('Supabase sync enabled for user', uid);
+        updateConnectionStatus(true);
+    } catch (err) {
+        console.error('Failed to bootstrap Supabase sync', err);
+        enableOfflineMode();
+    }
+}
+
+function enableOfflineMode() {
+    console.log('Switching to Offline Mode');
+    state.update({ offlineMode: true });
+    updateConnectionStatus(false);
+}
+
+function updateConnectionStatus(online) {
+    const indicator = document.getElementById('connectionStatus');
+    if (indicator) {
+        indicator.className = online ? 'status-online' : 'status-offline';
+        indicator.title = online ? 'Online: Data Synced' : 'Offline: Local Storage Only';
+    }
+}
+
+// Function to manually sync with Bot (Secure Proxy)
+function syncWithBot() {
+    if (window.Telegram?.WebApp) {
+        const data = {
+            action: 'sync_state',
+            state: state.state
+        };
+        window.Telegram.WebApp.sendData(JSON.stringify(data));
+    } else {
+        showToast('Telegram WebApp not detected', 'error');
+    }
+}
+
+async function ensureSupabaseRecords(uid) {
+    if (!supabaseClient) return;
+    let referralCode = state.get('user')?.referralCode || null;
+    try {
+        const { data: existing } = await supabaseClient
+            .from('users')
+            .select('referral_code')
+            .eq('id', uid)
+            .maybeSingle();
+        if (existing?.referral_code) {
+            referralCode = existing.referral_code;
+        }
+    } catch (err) {
+        console.warn('Referral lookup failed', err);
+    }
+    if (!referralCode) {
+        referralCode = generateReferralCode(uid);
+    }
+
+    const profilePayload = {
+        id: uid,
+        username: state.get('user')?.username || null,
+        full_name: state.get('user')?.name || null,
+        referral_code: referralCode
+    };
+
+    const { error: userError } = await supabaseClient
+        .from('users')
+        .upsert(profilePayload, { onConflict: 'id' });
+
+    if (userError) {
+        throw userError;
+    }
+
+    const { error: miningError } = await supabaseClient
+        .from('mining_data')
+        .upsert({ user_id: uid }, { onConflict: 'user_id' });
+
+    if (miningError) {
+        throw miningError;
+    }
+
+    state.update({
+        user: { ...state.get('user'), referralCode }
+    });
+}
+
+async function loadSupabaseState(uid) {
+    if (!supabaseClient) return;
+    suppressSupabaseSync = true;
+
+    try {
+        const [{ data: userRow, error: userError }, { data: miningRow, error: miningError }] = await Promise.all([
+            supabaseClient.from('users').select('*').eq('id', uid).single(),
+            supabaseClient.from('mining_data').select('*').eq('user_id', uid).maybeSingle()
+        ]);
+
+        if (userError && userError.code !== 'PGRST116') {
+            console.warn('Supabase user fetch error', userError);
+        }
+        if (miningError && miningError.code !== 'PGRST116') {
+            console.warn('Supabase mining fetch error', miningError);
+        }
+
+        if (userRow) {
+            const currentUser = state.get('user');
+            state.update({
+                xp: userRow.xp ?? state.get('xp'),
+                gold: userRow.gold ?? state.get('gold'),
+                rpgGold: userRow.rpg_gold ?? state.get('rpgGold') ?? 0,
+                level: userRow.level ?? state.get('level'),
+                streak: userRow.streak ?? state.get('streak'),
+                darkMatter: userRow.dark_matter ?? state.get('darkMatter') ?? 0,
+                quizStats: {
+                    ...state.get('quizStats'),
+                    total: userRow.quizzes_completed ?? state.get('quizStats').total
+                },
+                user: {
+                    ...currentUser,
+                    id: userRow.id,
+                    name: userRow.full_name || currentUser.name,
+                    username: userRow.username || currentUser.username,
+                    isPremium: (userRow.subscription_type ?? 0) > 0,
+                    premiumExpires: userRow.premium_expires || currentUser.premiumExpires,
+                    referralCode: userRow.referral_code || currentUser.referralCode,
+                    referralsCount: userRow.referrals_count ?? currentUser.referralsCount ?? 0,
+                    referredBy: userRow.referred_by || currentUser.referredBy
+                }
+            });
+        }
+
+        if (miningRow) {
+            state.update({
+                energy: miningRow.energy ?? state.get('energy'),
+                maxEnergy: miningRow.max_energy ?? state.get('maxEnergy'),
+                totalTaps: miningRow.total_taps ?? state.get('totalTaps'),
+                tapPower: miningRow.coins_per_tap ?? state.get('tapPower'),
+                autoTapRate: Number(miningRow.taps_per_second ?? state.get('autoTapRate')),
+                critChance: miningRow.critical_chance ?? state.get('critChance'),
+                upgrades: miningRow.upgrades ?? state.get('upgrades'),
+                gameCoins: miningRow.game_coins ?? state.get('gameCoins') ?? 0,
+                accumulatedCoins: miningRow.accumulated_coins ?? state.get('accumulatedCoins') ?? 0,
+                activeEffects: miningRow.active_effects ?? state.get('activeEffects') ?? [],
+                ownedSkins: miningRow.owned_skins ?? state.get('ownedSkins') ?? ['skin_default'],
+                currentSkin: miningRow.current_skin ?? state.get('currentSkin') ?? 'skin_default'
+            });
+        }
+    } finally {
+        suppressSupabaseSync = false;
+    }
+}
+
+async function handlePendingReferral() {
+    if (!pendingReferralCode || referralRewarded || !supabaseClient || !supabaseUserId) return;
+    try {
+        const code = pendingReferralCode.trim();
+        if (!code || code.length < 4) return;
+        const { data: inviter, error } = await supabaseClient
+            .from('users')
+            .select('id')
+            .eq('referral_code', code)
+            .maybeSingle();
+        if (error) {
+            console.warn('Referral query failed', error);
+            return;
+        }
+        if (!inviter || inviter.id === supabaseUserId) {
             return;
         }
 
-        const el = document.getElementById(elementId);
-        if (!el) return;
+        referralRewarded = true;
+        pendingReferralCode = null;
 
-        // Clean current text to number
-        const startValue = parseInt(el.textContent.replace(/\D/g, '')) || 0;
-        
-        // Don't animate if difference is small or negative
-        if (startValue === endValue) return;
-
-        const obj = { value: startValue };
-        
-        gsap.to(obj, {
-            value: endValue,
-            duration: duration,
-            ease: 'power2.out',
-            onUpdate: () => {
-                el.textContent = formatNumber(Math.round(obj.value));
-            }
-        });
-    }
-
-    // Tap Interaction
-    animateTap(element) {
-        if (!this.isReady) return;
-        
-        gsap.timeline()
-            .to(element, { scale: 0.92, duration: 0.05, ease: 'power1.out' })
-            .to(element, { scale: 1, duration: 0.3, ease: 'elastic.out(1, 0.3)' });
-    }
-    
-    // Floating text for taps
-    spawnFloater(x, y, text, isCritical) {
-        const floater = document.createElement('div');
-        floater.textContent = text;
-        floater.className = 'click-effect';
-        
-        // Override specific properties based on crit
-        floater.style.left = `${x}px`;
-        floater.style.top = `${y}px`;
-        
-        if (isCritical) {
-            floater.style.color = 'var(--accent-pink)';
-            floater.style.fontSize = '2rem';
-            floater.style.textShadow = '0 0 15px var(--accent-pink)';
-        } else {
-            floater.style.color = 'var(--text-primary)';
-        }
-        
-        document.body.appendChild(floater);
-        
-        if (this.isReady) {
-            // Remove the CSS animation if we are using GSAP to avoid conflict
-            floater.style.animation = 'none';
-            
-            gsap.timeline({ onComplete: () => floater.remove() })
-                .fromTo(floater, 
-                    { opacity: 0, scale: 0.5, y: 0 },
-                    { opacity: 1, scale: isCritical ? 1.5 : 1.2, y: -80, duration: 0.5, ease: 'back.out(1.7)' }
-                )
-                .to(floater, { opacity: 0, y: -150, duration: 0.3, ease: 'power2.in' }, '+=0.1');
-        } else {
-            // Fallback is handled by the CSS animation defined in .click-effect
-            setTimeout(() => floater.remove(), 1000);
-        }
-    }
-}
-
-const ANIMATIONS = new AnimationController();
-
-// ===========================================
-// APP INITIALIZATION
-// ===========================================
-
-async function initApp() {
-    console.log('🚀 Initializing Nexus Media App...');
-    
-    // Initialize engines first
-    SoundEngine.init();
-    HapticEngine.init();
-    
-    // Load settings
-    loadSettings();
-    
-    // Initialize Telegram WebApp
-    const telegramReady = initTelegram();
-    
-    // Initialize Supabase
-    await initSupabase();
-    
-    // Load user data
-    await loadUserData();
-    
-    // Sync RPG data
-    await syncRPGData();
-    
-    // Set up global feedback listeners
-    addGlobalClickListeners();
-    
-    // Initialize UI
-    updateUI();
-    
-    // Initialize components
-    initRecommendations();
-    initQuizOptions();
-    initMining();
-    initAIChat();
-    
-    // Init visual effects from old JS
-    initSpotlight();
-    
-    // Init canvas effects
-    const particleCanvas = document.getElementById('particleCanvas');
-    if (particleCanvas) {
-        const particles = new ParticleSystem(particleCanvas);
-        particles.update();
-    }
-    
-    const meshCanvas = document.getElementById('meshGradient');
-    if (meshCanvas) {
-        const meshGradient = new MeshGradient(meshCanvas);
-        meshGradient.animate();
-    }
-    
-    // Init mystery drops
-    new MysteryDropSystem();
-    
-    // Init visual effects (desktop only)
-    if (!('ontouchstart' in window) || window.innerWidth > 768) {
-        new CursorTrail();
-        new MagneticButtons();
-        new ParallaxEffect();
-    }
-    
-    // Hide loader
-    const loader = document.getElementById('loader');
-    const app = document.getElementById('app');
-    if (loader) loader.classList.add('hidden');
-    if (app) app.classList.add('visible');
-    
-    console.log('Nexus WebApp initialized with enhanced visual effects!');
-    
-    // Failsafe: ensure loader hides even if GSAP fails
-    setTimeout(() => {
-        const loader = document.getElementById('loader');
-        if (loader && !loader.classList.contains('hidden')) {
-            loader.classList.add('hidden');
-        }
-    }, 2000);
-}
-
-function setupNavigation() {
-    // Bottom navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const section = item.dataset.section;
-            if (section) navigateTo(section);
-        });
-    });
-    
-    // Modal close buttons
-    document.querySelectorAll('.modal-close').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modal = e.target.closest('.modal');
-            if (modal) modal.classList.remove('active');
-        });
-    });
-    
-    // Modal overlay clicks
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('active');
-            }
-        });
-    });
-}
-
-// Start app when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
-}
-
-// ===========================================
-// SETTINGS FUNCTIONS
-// ===========================================
-
-function loadSettings() {
-    const saved = localStorage.getItem('nexus_settings');
-    if (saved) {
-        try {
-            const settings = JSON.parse(saved);
-            AppState.settings = { ...AppState.settings, ...settings };
-        } catch (e) {
-            console.error('Settings load error:', e);
-        }
-    }
-    
-    // Apply settings to UI
-    const soundToggle = document.getElementById('settingSound');
-    const hapticToggle = document.getElementById('settingHaptic');
-    const themeSelect = document.getElementById('settingTheme');
-    
-    if (soundToggle) soundToggle.checked = AppState.settings.sound;
-    if (hapticToggle) hapticToggle.checked = AppState.settings.haptic;
-    if (themeSelect) themeSelect.value = AppState.settings.theme;
-    
-    // Sync with engines
-    SoundEngine.enabled = AppState.settings.sound;
-    HapticEngine.enabled = AppState.settings.haptic;
-}
-
-function toggleSetting(setting) {
-    switch (setting) {
-        case 'sound':
-            AppState.settings.sound = !AppState.settings.sound;
-            SoundEngine.toggle(AppState.settings.sound);
-            if (AppState.settings.sound) {
-                SoundEngine.play('click');
-            }
-            break;
-        case 'haptic':
-            AppState.settings.haptic = !AppState.settings.haptic;
-            HapticEngine.toggle(AppState.settings.haptic);
-            if (AppState.settings.haptic) {
-                HapticEngine.vibrate('medium');
-            }
-            break;
-    }
-    
-    saveSettings();
-    showToast('Sozlamalar', `${setting === 'sound' ? 'Ovoz' : 'Vibratsiya'} ${AppState.settings[setting] ? 'yoqildi' : 'o\'chirildi'}`, 'success');
-}
-
-function changeTheme(theme) {
-    AppState.settings.theme = theme;
-    document.body.setAttribute('data-theme', theme);
-    saveSettings();
-    
-    SoundEngine.play('whoosh');
-    showToast('Mavzu', `${theme.charAt(0).toUpperCase() + theme.slice(1)} mavzusi qo'llanildi`, 'success');
-}
-
-function saveSettings() {
-    localStorage.setItem('nexus_settings', JSON.stringify(AppState.settings));
-}
-
-function clearCache() {
-    if (confirm('Barcha saqlangan ma\'lumotlar o\'chiriladi. Davom etasizmi?')) {
-        localStorage.clear();
-        sessionStorage.clear();
-        showToast('Tozalandi', 'Kesh tozalandi. Sahifa qayta yuklanadi...', 'success');
-        setTimeout(() => location.reload(), 1500);
-    }
-}
-
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('active');
-        SoundEngine.play('whoosh');
-        HapticEngine.vibrate('light');
-    }
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-// ===========================================
-// FEEDBACK FUNCTIONS
-// ===========================================
-
-function triggerFeedback(type = 'light') {
-    switch (type) {
-        case 'success':
-            SoundEngine.play('success');
-            HapticEngine.vibrate('success');
-            break;
-        case 'error':
-            SoundEngine.play('error');
-            HapticEngine.vibrate('error');
-            break;
-        case 'tap':
-            SoundEngine.play('tap');
-            HapticEngine.vibrate('light');
-            break;
-        case 'coin':
-            SoundEngine.play('coin');
-            HapticEngine.vibrate('light');
-            break;
-        case 'levelup':
-            SoundEngine.play('levelup');
-            HapticEngine.vibrate('heavy');
-            createConfetti('heavy');
-            break;
-        default:
-            SoundEngine.play('click');
-            HapticEngine.vibrate('light');
-    }
-}
-
-// ===========================================
-// STATE MANAGEMENT
-// ===========================================
-
-const AppState = {
-    user: null,
-    telegramUser: null,
-    currentSection: 'home',
-    isLoading: true,
-    offlineMode: false,
-    lastSaveTime: 0,
-    
-    // Settings
-    settings: {
-        sound: true,
-        haptic: true,
-        theme: 'default'
-    },
-    
-    // Quiz state
-    quiz: {
-        topic: 'general',
-        difficulty: 'easy',
-        count: 5,
-        remaining: 10,
-        total: 10,
-        currentQuestion: 0,
-        score: 0,
-        answers: [],
-        stats: { total: 0, correct: 0, streak: 0 }
-    },
-    
-    // Battle state
-    battle: {
-        active: false,
-        id: null,
-        participants: [],
-        currentQuestion: null,
-        timer: 30,
-        isCreator: false
-    },
-    
-    // Mining state
-    mining: {
-        balance: 0,
-        energy: 1000,
-        maxEnergy: 1000,
-        tapPower: 1,
-        multiplier: 1,
-        autoTapRate: 0,
-        critChance: 5,
-        accumulatedCoins: 0,
-        upgrades: {
-            tap: 1,
-            energy: 1,
-            auto: 0,
-            luck: 1
-        }
-    },
-    
-    // Daily Challenges
-    dailyChallenges: [],
-    lastChallengeReset: null,
-    
-    // Recommendations
-    recommendations: [
-        {
-            id: 'quiz',
-            icon: 'fa-brain',
-            badge: 'AI',
-            title: 'AI Quiz bilan bilimingizni sinang',
-            desc: "Sun'iy intellekt tomonidan yaratilgan savollar bilan o'zingizni rivojlantiring"
-        },
-        {
-            id: 'premium',
-            icon: 'fa-crown',
-            badge: 'VIP',
-            title: 'Premium bilan chegaralarni oching',
-            desc: 'Kuniga 100 ta AI savol, barcha kitoblar va filmlar'
-        },
-        {
-            id: 'battle',
-            icon: 'fa-bolt',
-            badge: 'LIVE',
-            title: 'Live Battle musobaqalariga qo\'shiling',
-            desc: 'Boshqalar bilan real vaqtda raqobatlashing'
-        },
-        {
-            id: 'gamification',
-            icon: 'fa-trophy',
-            badge: 'XP',
-            title: 'Haftalik reytingda yuqoriga chiqing',
-            desc: 'XP yig\'ing va mukofotlar qo\'lga kiriting'
-        }
-    ],
-    
-    // Achievements
-    achievements: []
-};
-
-// Persistence functions
-function loadLocalState() {
-    try {
-        const saved = localStorage.getItem('nexus_state_v2');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            
-            // Deep merge for specific objects to avoid overwriting defaults with null/undefined if schema changed
-            if (parsed.settings) Object.assign(AppState.settings, parsed.settings);
-            if (parsed.mining) Object.assign(AppState.mining, parsed.mining);
-            if (parsed.user) AppState.user = parsed.user;
-            if (parsed.quiz && parsed.quiz.stats) AppState.quiz.stats = parsed.quiz.stats;
-            if (parsed.achievements) AppState.achievements = parsed.achievements;
-            
-            console.log('Local state loaded');
-        }
-    } catch (e) {
-        console.error('State load error:', e);
-    }
-}
-
-function saveLocalState() {
-    try {
-        AppState.lastSaveTime = Date.now();
-        // Don't save large static arrays like recommendations
-        const stateToSave = {
-            user: AppState.user,
-            settings: AppState.settings,
-            mining: AppState.mining,
-            quiz: { stats: AppState.quiz.stats },
-            achievements: AppState.achievements
+        const payload = {
+            inviter_id: inviter.id,
+            invitee_id: supabaseUserId,
+            reward_type: 'xp',
+            rewarded: false
         };
-        localStorage.setItem('nexus_state_v2', JSON.stringify(stateToSave));
-    } catch (e) {
-        console.error('State save error:', e);
+        const { error: refError } = await supabaseClient.from('referrals').insert(payload);
+        if (refError && refError.code !== '23505') {
+            console.warn('Referral insert error', refError);
+        } else {
+            await rewardReferral(inviter.id);
+        }
+    } catch (err) {
+        console.error('handlePendingReferral error', err);
     }
 }
 
-// Auto-save every 30 seconds
-setInterval(saveLocalState, 30000);
+async function rewardReferral(inviterId) {
+    if (!supabaseClient) return;
+    const xpGain = CONFIG.REFERRAL_REWARD_XP || 500;
+    const inviterGold = CONFIG.REFERRAL_INVITER_GOLD || 1000;
+    try {
+        const newXp = state.get('xp') + xpGain;
+        state.update({
+            xp: newXp,
+            user: { ...state.get('user'), referredBy: inviterId }
+        });
+        await supabaseClient.from('users')
+            .update({ xp: newXp })
+            .eq('id', supabaseUserId);
 
-// ===========================================
+        await incrementInviterRewards(inviterId, xpGain, inviterGold);
+        await supabaseClient.from('referrals')
+            .update({ rewarded: true })
+            .eq('invitee_id', supabaseUserId);
+
+        showToast('Referral bonusi qo\'shildi!', 'success');
+    } catch (err) {
+        console.error('rewardReferral error', err);
+    }
+}
+
+function scheduleSupabaseSync(snapshot) {
+    if (!supabaseSyncEnabled || suppressSupabaseSync) return;
+    if (!supabaseClient || !supabaseUserId) return;
+
+    supabaseLatestState = {
+        user: { ...snapshot.user },
+        xp: snapshot.xp,
+        gold: snapshot.gold,
+        rpgGold: snapshot.rpgGold || 0,
+        level: snapshot.level,
+        streak: snapshot.streak,
+        darkMatter: snapshot.darkMatter || 0,
+        energy: snapshot.energy,
+        maxEnergy: snapshot.maxEnergy,
+        totalTaps: snapshot.totalTaps,
+        autoTapRate: snapshot.autoTapRate,
+        tapPower: snapshot.tapPower,
+        critChance: snapshot.critChance,
+        upgrades: snapshot.upgrades,
+        totalGoldEarned: snapshot.totalGoldEarned,
+        gameCoins: snapshot.gameCoins || 0,
+        accumulatedCoins: snapshot.accumulatedCoins || 0,
+        active_effects: snapshot.activeEffects || [],
+        owned_skins: snapshot.ownedSkins || ['skin_default'],
+        current_skin: snapshot.currentSkin || 'skin_default'
+    };
+
+    clearTimeout(supabaseSyncTimer);
+    supabaseSyncTimer = setTimeout(flushSupabaseSync, 1500);
+}
+
+async function flushSupabaseSync() {
+    if (!supabaseLatestState || !supabaseClient) return;
+
+    const s = supabaseLatestState;
+    const nowIso = new Date().toISOString();
+
+    const userPayload = {
+        id: supabaseUserId,
+        username: s.user.username || null,
+        full_name: s.user.name || null,
+        xp: s.xp,
+        gold: s.gold,
+        rpg_gold: s.rpgGold || 0,
+        level: s.level,
+        streak: s.streak,
+        dark_matter: s.darkMatter,
+        subscription_type: s.user.isPremium ? 1 : 0,
+        premium_expires: s.user.premiumExpires || null,
+        last_active: nowIso,
+        quizzes_completed: state.get('quizStats')?.total ?? null,
+        referral_code: s.user.referralCode || null,
+        referrals_count: s.user.referralsCount ?? 0,
+        referred_by: s.user.referredBy || null
+    };
+
+    const miningPayload = {
+        user_id: supabaseUserId,
+        energy: s.energy,
+        max_energy: s.maxEnergy,
+        total_taps: s.totalTaps,
+        taps_per_second: s.autoTapRate,
+        coins_per_tap: s.tapPower,
+        critical_chance: s.critChance,
+        game_coins: s.gameCoins || 0,
+        accumulated_coins: s.accumulatedCoins || 0,
+        active_effects: s.activeEffects || [],
+        owned_skins: s.ownedSkins || ['skin_default'],
+        current_skin: s.currentSkin || 'skin_default',
+        upgrades: s.upgrades,
+        updated_at: nowIso
+    };
+
+    try {
+        const { error: userError } = await supabaseClient
+            .from('users')
+            .upsert(userPayload, { onConflict: 'id' });
+
+        if (userError) {
+            console.warn('Supabase user sync error', userError);
+        }
+
+        const { error: miningError } = await supabaseClient
+            .from('mining_data')
+            .upsert(miningPayload, { onConflict: 'user_id' });
+
+        if (miningError) {
+            console.warn('Supabase mining sync error', miningError);
+        }
+    } catch (err) {
+        console.error('Supabase sync failed', err);
+    }
+}
+
+async function recordPremiumTransaction({ plan, days, amount, currency = 'UZS', meta = {} }) {
+    if (!supabaseClient || !supabaseUserId) return;
+    const payload = {
+        user_id: supabaseUserId,
+        plan,
+        days,
+        amount,
+        currency,
+        status: 'success',
+        meta
+    };
+    const { error } = await supabaseClient.from('premium_transactions').insert(payload);
+    if (error) {
+        console.warn('Premium transaction insert failed', error);
+        throw error;
+    }
+}
+
+async function grantPremiumDays(days, source = 'manual', skipRecord = false) {
+    if (!supabaseClient || !supabaseUserId) {
+        showToast('Supabase ulanmagan', 'error');
+        return false;
+    }
+    if (premiumSyncInFlight) return false;
+    premiumSyncInFlight = true;
+    try {
+        const currentExpire = state.get('user').premiumExpires ? new Date(state.get('user').premiumExpires) : new Date();
+        const baseDate = currentExpire > new Date() ? currentExpire : new Date();
+        baseDate.setDate(baseDate.getDate() + days);
+        const iso = baseDate.toISOString();
+
+        const { error } = await supabaseClient.from('users')
+            .update({ subscription_type: 1, premium_expires: iso })
+            .eq('id', supabaseUserId);
+        if (error) {
+            throw error;
+        }
+
+        if (!skipRecord) {
+            await recordPremiumTransaction({ plan: source, days, amount: 0, currency: 'SYS' });
+        }
+
+        state.update({
+            user: { ...state.get('user'), isPremium: true, premiumExpires: iso }
+        });
+        showToast(`+${days} kun Premium aktivlashtirildi`, 'success');
+        return true;
+    } catch (err) {
+        console.error('grantPremiumDays error', err);
+        showToast('Premiumni aktivlashtirishda xatolik', 'error');
+        return false;
+    } finally {
+        premiumSyncInFlight = false;
+    }
+}
+
+async function exchangeXpForPremium() {
+    const xp = state.get('xp');
+    const cost = CONFIG.XP_PREMIUM_COST || 10000;
+    if (xp < cost) {
+        showToast('XP yetarli emas', 'error');
+        return;
+    }
+    if (!supabaseClient || !supabaseUserId) {
+        showToast('Supabase ulanmagan', 'error');
+        return;
+    }
+    state.update({ xp: xp - cost });
+    const success = await grantPremiumDays(1, 'xp_exchange', true);
+    if (!success) {
+        // rollback
+        state.update({ xp });
+    } else {
+        await recordPremiumTransaction({ plan: 'xp_exchange', days: 1, amount: cost, currency: 'XP', meta: { type: 'exchange' } });
+        scheduleSupabaseSync(state.state);
+    }
+}
+
+async function exchangeGoldForPremium() {
+    const gold = state.get('gold');
+    const cost = CONFIG.GOLD_PREMIUM_COST || 50000;
+    const rewardDays = CONFIG.GOLD_PREMIUM_DAYS || 3;
+    if (gold < cost) {
+        showToast('Gold yetarli emas', 'error');
+        return;
+    }
+    if (!supabaseClient || !supabaseUserId) {
+        showToast('Supabase ulanmagan', 'error');
+        return;
+    }
+    state.update({ gold: gold - cost });
+    const success = await grantPremiumDays(rewardDays, 'gold_exchange', true);
+    if (!success) {
+        state.update({ gold });
+    } else {
+        await recordPremiumTransaction({ plan: 'gold_exchange', days: rewardDays, amount: cost, currency: 'GOLD', meta: { type: 'exchange' } });
+        scheduleSupabaseSync(state.state);
+    }
+}
+
+async function buyPremiumPlan(planId, days, amount) {
+    if (!supabaseClient || !supabaseUserId) {
+        showToast('Supabase ulanmagan', 'error');
+        return;
+    }
+    if (!planId || !days) {
+        showToast('Plan maʼlumoti topilmadi', 'error');
+        return;
+    }
+    showToast('Premium faollashtirilmoqda...', 'info');
+    try {
+        await recordPremiumTransaction({ plan: planId, days, amount, currency: 'UZS', meta: { source: 'plan' } });
+        const success = await grantPremiumDays(days, planId, true);
+        if (success) {
+            showToast('Premium muvaffaqiyatli aktivlashtirildi', 'success');
+            scheduleSupabaseSync(state.state);
+            
+            // Offer to return to bot
+            setTimeout(() => {
+                if (window.confirm && confirm('Premium muvaffaqiyatli faollashtirildi! Botga qaytib xaridni tasdiqlaysizmi?')) {
+                    sendToBot('premium_purchased', { plan: planId, days: days });
+                }
+            }, 1000);
+        }
+    } catch (err) {
+        console.error('buyPremiumPlan error', err);
+        showToast('Premium sotib olishda xatolik', 'error');
+    }
+}
+
+// ============================================
+// TELEGRAM WEBAPP INTEGRATION
+// ============================================
+const tg = window.Telegram?.WebApp;
+
+function initTelegram() {
+    if (!tg) {
+        console.log('Not in Telegram WebApp');
+        return;
+    }
+
+    tg.ready();
+    tg.expand();
+    tg.enableClosingConfirmation();
+
+    if (tg.initDataUnsafe?.user) {
+        const user = tg.initDataUnsafe.user;
+        state.update({
+            user: {
+                id: user.id,
+                name: user.first_name + (user.last_name ? ' ' + user.last_name : ''),
+                username: user.username || '',
+                isPremium: user.is_premium || false,
+                isAdmin: CONFIG.ADMIN_IDS.includes(user.id),
+                referralCode: state.get('user')?.referralCode || null,
+                referredBy: state.get('user')?.referredBy || null
+            }
+        });
+        if (tg.initDataUnsafe?.start_param) {
+            pendingReferralCode = tg.initDataUnsafe.start_param;
+        }
+        bootstrapSupabase();
+    }
+
+    document.getElementById('claimBtn')?.addEventListener('click', claimAutoTapEarnings);
+    
+    // Set theme
+    document.documentElement.style.setProperty('--tg-theme-bg', tg.themeParams.bg_color || '#050505');
+}
+
+function haptic(type = 'light') {
+    if (!state.get('settings').haptic || !tg?.HapticFeedback) return;
+    
+    switch(type) {
+        case 'light': tg.HapticFeedback.impactOccurred('light'); break;
+        case 'medium': tg.HapticFeedback.impactOccurred('medium'); break;
+        case 'heavy': tg.HapticFeedback.impactOccurred('heavy'); break;
+        case 'success': tg.HapticFeedback.notificationOccurred('success'); break;
+        case 'error': tg.HapticFeedback.notificationOccurred('error'); break;
+    }
+}
+
+function sendToBot(action, data) {
+    if (tg) {
+        tg.sendData(JSON.stringify({ action, ...data }));
+    }
+}
+
+// ============================================
 // AUDIO ENGINE
-// ===========================================
+// ============================================
 class AudioEngine {
     constructor() {
         this.ctx = null;
@@ -969,7 +789,9 @@ class AudioEngine {
         // Resume audio context on first user interaction
         const resumeAudio = () => {
             if (this.ctx && this.ctx.state === 'suspended') {
-                this.ctx.resume();
+                this.ctx.resume().then(() => {
+                    console.log('AudioContext resumed successfully');
+                });
             }
             document.removeEventListener('click', resumeAudio);
             document.removeEventListener('touchstart', resumeAudio);
@@ -1007,18 +829,20 @@ class AudioEngine {
                 { type: 'sine', freq: 784, duration: 0.25, volume: 0.22 },
                 { noise: true, duration: 0.12, volume: 0.05, filter: { type: 'highpass', frequency: 1800 } }
             ],
-            correct: [
-                 { type: 'sine', freq: 880, duration: 0.1, volume: 0.2 },
-                 { type: 'sine', freq: 1760, duration: 0.2, volume: 0.1 }
+            achievement: [
+                { type: 'triangle', freq: 784, duration: 0.18, volume: 0.25 },
+                { type: 'triangle', freq: 988, duration: 0.2, volume: 0.22 },
+                { type: 'triangle', freq: 1175, duration: 0.22, volume: 0.2 }
             ],
-            wrong: [
-                { type: 'sawtooth', freq: 150, duration: 0.3, volume: 0.3, glide: [{ time: 0.3, freq: 100 }] }
+            error: [
+                { type: 'sawtooth', freq: 260, duration: 0.25, volume: 0.2, glide: [{ time: 0.2, freq: 120 }] },
+                { noise: true, duration: 0.2, volume: 0.07, filter: { type: 'lowpass', frequency: 600 } }
             ]
         };
     }
 
     play(name) {
-        if (!AppState.settings.sound) return;
+        if (!state.get('settings').sound) return;
         if (!this.ctx) this.init();
         if (!this.ctx) return;
 
@@ -1077,12 +901,107 @@ class AudioEngine {
 
 const audio = new AudioEngine();
 
-// ===========================================
-// UPGRADES & SHOP SYSTEM
-// ===========================================
+// ============================================
+// PARTICLE SYSTEM
+// ============================================
+class ParticleSystem {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
 
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    emit(x, y, count = 10, color = '#ffd700') {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8 - 3,
+                life: 1,
+                decay: 0.02 + Math.random() * 0.02,
+                size: 3 + Math.random() * 4,
+                color
+            });
+        }
+    }
+
+    update() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.particles = this.particles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.2;
+            p.life -= p.decay;
+            
+            if (p.life <= 0) return false;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+            this.ctx.fillStyle = p.color;
+            this.ctx.globalAlpha = p.life;
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+            
+            return true;
+        });
+        
+        requestAnimationFrame(() => this.update());
+    }
+}
+
+// ============================================
+// MESH GRADIENT BACKGROUND
+// ============================================
+class MeshGradient {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.time = 0;
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    animate() {
+        this.time += 0.005;
+        
+        const gradient = this.ctx.createRadialGradient(
+            this.canvas.width / 2 + Math.sin(this.time) * 100,
+            this.canvas.height / 2 + Math.cos(this.time) * 100,
+            0,
+            this.canvas.width / 2,
+            this.canvas.height / 2,
+            this.canvas.width
+        );
+        
+        gradient.addColorStop(0, 'rgba(0, 255, 247, 0.1)');
+        gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.05)');
+        gradient.addColorStop(1, 'rgba(5, 5, 5, 1)');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        requestAnimationFrame(() => this.animate());
+    }
+}
+
+// ============================================
+// UPGRADES SYSTEM
+// ============================================
 const UPGRADES = {
-    tap: {
+    tapPower: {
         name: 'Tap Power',
         icon: 'fa-hand-pointer',
         baseCost: 100,
@@ -1090,7 +1009,7 @@ const UPGRADES = {
         effect: (level) => level + 1,
         description: 'Har bir tap uchun +1 coin'
     },
-    auto: {
+    autoTap: {
         name: 'Auto Tap',
         icon: 'fa-robot',
         baseCost: 500,
@@ -1106,98 +1025,57 @@ const UPGRADES = {
         effect: (level) => 1000 + level * 200,
         description: 'Maksimal energiya +200'
     },
+    crit: {
+        name: 'Critical',
+        icon: 'fa-bolt',
+        baseCost: 300,
+        costMultiplier: 1.6,
+        effect: (level) => 5 + level * 2,
+        description: 'Kritik urilish ehtimoli +2%'
+    },
     luck: {
         name: 'Luck',
         icon: 'fa-clover',
-        baseCost: 300,
-        costMultiplier: 1.6,
-        effect: (level) => 5 + level * 0.5, // Crit chance
-        description: 'Kritik urish imkoniyati +0.5%'
+        baseCost: 400,
+        costMultiplier: 1.7,
+        effect: (level) => level * 0.5,
+        description: 'Bonus drop ehtimoli +0.5%'
     }
 };
 
+// ============================================
+// SHOP SYSTEM
+// ============================================
 const SHOP_ITEMS = {
     boosters: [
         { id: 'speed_boost', name: 'Speed Boost', icon: 'fa-bolt', cost: 2000, duration: 300, effect: 'autoTapRate', multiplier: 2, desc: '2x Auto Tap (5 daqiqa)' },
+        { id: 'luck_boost', name: 'Lucky Charm', icon: 'fa-clover', cost: 5000, duration: 300, effect: 'critChance', add: 20, desc: '+20% Crit Chance (5 daqiqa)' },
         { id: 'energy_drink', name: 'Energy Drink', icon: 'fa-wine-bottle', cost: 1000, duration: 0, effect: 'energy', refill: true, desc: 'To\'liq energiya' }
     ],
     skins: [
         { id: 'skin_default', name: 'Default Core', icon: 'fa-circle', cost: 0, desc: 'Oddiy reaktor' },
         { id: 'skin_neon', name: 'Neon Core', icon: 'fa-sun', cost: 10000, desc: 'Neon rangli reaktor' },
-        { id: 'skin_gold', name: 'Golden Core', icon: 'fa-gem', cost: 50000, desc: 'Oltin reaktor' }
+        { id: 'skin_gold', name: 'Golden Core', icon: 'fa-gem', cost: 50000, desc: 'Oltin reaktor' },
+        { id: 'skin_void', name: 'Void Core', icon: 'fa-ghost', cost: 100000, desc: 'Qora tuynuk stili' }
     ]
 };
 
-function getUpgradeCost(type) {
-    const upgrade = UPGRADES[type];
-    const level = AppState.mining.upgrades[type] || 0;
-    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
-}
-
-function purchaseUpgrade(type) {
-    const cost = getUpgradeCost(type);
-    const balance = AppState.mining.balance;
+function getEffectiveStat(stat) {
+    let value = state.get(stat);
+    const effects = state.get('activeEffects') || [];
     
-    if (balance < cost) {
-        showToast('Mablag\' yetarli emas', 'Yana mining qiling!', 'error');
-        playSound('wrong');
-        return false;
-    }
-    
-    // Deduct cost
-    AppState.mining.balance -= cost;
-    AppState.mining.upgrades[type]++;
-    
-    // Apply effects
-    applyUpgradeEffects();
-    
-    // Sync
-    updateMiningStats();
-    
-    showToast(`${UPGRADES[type].name} yangilandi!`, `Level ${AppState.mining.upgrades[type]}`, 'success');
-    playSound('upgrade');
-    
-    // Re-render if shop is open (todo)
-    return true;
-}
-
-function applyUpgradeEffects() {
-    const upgrades = AppState.mining.upgrades;
-    
-    AppState.mining.tapPower = UPGRADES.tap.effect(upgrades.tap);
-    AppState.mining.maxEnergy = UPGRADES.energy.effect(upgrades.energy);
-    AppState.mining.autoTapRate = UPGRADES.auto.effect(upgrades.auto);
-    AppState.mining.critChance = UPGRADES.luck.effect(upgrades.luck);
-    
-    // Also check boosters
-    // (Boosters logic to be added in getEffectiveStat or similar if needed)
-}
-
-function updateMiningStats() {
-    // Sync to Supabase
-    if (supabaseClient && AppState.user) {
-        supabaseClient.from('mining_data').upsert({
-            user_id: AppState.user.user_id,
-            balance: AppState.mining.balance,
-            energy: AppState.mining.energy,
-            max_energy: AppState.mining.maxEnergy,
-            tap_power: AppState.mining.tapPower,
-            taps_per_second: AppState.mining.autoTapRate,
-            critical_chance: AppState.mining.critChance,
-            upgrades: AppState.mining.upgrades,
-            owned_skins: AppState.mining.ownedSkins,
-            current_skin: AppState.mining.currentSkin,
-            achievements: AppState.achievements || [],
-            updated_at: new Date().toISOString()
-        }).then(({ error }) => {
-            if (error) console.error('Mining sync error:', error);
-        });
-    }
-    updateUI();
+    effects.forEach(eff => {
+        const item = SHOP_ITEMS.boosters.find(i => i.id === eff.id);
+        if (item && item.effect === stat) {
+            if (item.multiplier) value *= item.multiplier;
+            if (item.add) value += item.add;
+        }
+    });
+    return value;
 }
 
 function buyShopItem(id, type) {
-    const balance = AppState.mining.balance;
+    const gameCoins = state.get('gameCoins');
     let item;
     
     if (type === 'booster') {
@@ -1208,1800 +1086,2370 @@ function buyShopItem(id, type) {
     
     if (!item) return;
     
-    if (balance < item.cost) {
-        showToast('Mablag\' yetarli emas', 'Yana mining qiling!', 'error');
-        playSound('wrong');
+    if (gameCoins < item.cost) {
+        showToast('Coin yetarli emas!', 'error');
         return;
     }
     
     // Purchase logic
     if (type === 'skin') {
-        const ownedSkins = AppState.mining.ownedSkins || ['skin_default'];
+        const ownedSkins = state.get('ownedSkins') || ['skin_default'];
         if (ownedSkins.includes(id)) {
             // Equip
-            AppState.mining.currentSkin = id;
+            state.update({ currentSkin: id });
             showToast(`${item.name} o'rnatildi!`, 'success');
-            updateUI(); 
+            updateUI(); // To update reactor look
             return;
         }
         
-        AppState.mining.balance -= item.cost;
-        if (!AppState.mining.ownedSkins) AppState.mining.ownedSkins = ['skin_default'];
-        AppState.mining.ownedSkins.push(id);
-        AppState.mining.currentSkin = id;
-        
+        state.update({
+            gameCoins: gameCoins - item.cost,
+            ownedSkins: [...ownedSkins, id],
+            currentSkin: id
+        });
         showToast(`${item.name} sotib olindi!`, 'success');
     } else {
         // Booster
         if (item.refill) {
-            AppState.mining.balance -= item.cost;
-            AppState.mining.energy = AppState.mining.maxEnergy;
+            state.update({
+                gameCoins: gameCoins - item.cost,
+                energy: state.get('maxEnergy')
+            });
             showToast('Energiya to\'ldirildi!', 'success');
         } else {
-            // Implement duration boosters later if needed
-            showToast('Tez orada...', 'info');
-            return; 
-        }
-    }
-    
-    playSound('upgrade');
-    renderShopModal();
-    updateMiningStats();
-}
-
-function openShop() {
-    renderUpgrades();
-    renderShopModal();
-    document.getElementById('shopModal').classList.add('active');
-}
-
-function renderUpgrades() {
-    const container = document.getElementById('upgradesList');
-    if (!container) return;
-    
-    container.innerHTML = Object.entries(UPGRADES).map(([key, u]) => {
-        const level = AppState.mining.upgrades[key] || 0;
-        const cost = getUpgradeCost(key);
-        
-        return `
-            <div class="upgrade-item glass-card">
-                <div class="upgrade-icon">
-                    <i class="fas ${u.icon}"></i>
-                </div>
-                <div class="upgrade-info">
-                    <div class="upgrade-name">${u.name} <span class="upgrade-level">Lvl ${level}</span></div>
-                    <div class="upgrade-desc">${u.description}</div>
-                </div>
-                <button class="upgrade-btn" onclick="purchaseUpgrade('${key}')">
-                    <div class="upgrade-cost">
-                        <i class="fas fa-coins"></i> ${formatNumber(cost)}
-                    </div>
-                    <div>Yuksalish</div>
-                </button>
-            </div>
-        `;
-    }).join('');
-}
-
-function switchShopTab(tab) {
-    // Update tab buttons
-    document.querySelectorAll('.shop-tab').forEach(btn => {
-        if (btn.textContent.includes(tab === 'upgrades' ? 'Yuksalish' : 'Buyumlar')) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
-    // Update content
-    document.querySelectorAll('.shop-tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    const target = tab === 'upgrades' ? 'shopTabUpgrades' : 'shopTabItems';
-    document.getElementById(target).classList.add('active');
-    
-    if (tab === 'upgrades') {
-        renderUpgrades();
-    } else {
-        renderShopModal();
-    }
-}
-
-function renderShopModal() {
-    const container = document.getElementById('shopItemsList');
-    if (!container) return;
-    
-    const boostersHtml = SHOP_ITEMS.boosters.map(item => `
-        <div class="shop-item glass-card">
-            <div class="shop-icon">
-                <i class="fas ${item.icon}"></i>
-            </div>
-            <div class="shop-info">
-                <div class="shop-name">${item.name}</div>
-                <div class="shop-desc">${item.desc}</div>
-            </div>
-            <button class="shop-btn" onclick="buyShopItem('${item.id}', 'booster')">
-                <i class="fas fa-coins"></i> ${formatNumber(item.cost)}
-            </button>
-        </div>
-    `).join('');
-    
-    const skinsHtml = SHOP_ITEMS.skins.map(item => {
-        const owned = AppState.mining.ownedSkins?.includes(item.id);
-        const equipped = AppState.mining.currentSkin === item.id;
-        
-        let btnText = `<i class="fas fa-coins"></i> ${formatNumber(item.cost)}`;
-        let btnClass = "shop-btn";
-        
-        if (owned) {
-            btnText = equipped ? '<i class="fas fa-check"></i> O\'rnatilgan' : 'O\'rnatish';
-            btnClass = equipped ? "shop-btn active" : "shop-btn";
-        }
-        
-        return `
-            <div class="shop-item glass-card ${equipped ? 'equipped' : ''}">
-                <div class="shop-icon" style="${item.id === 'skin_neon' ? 'color:#00ff00;' : item.id === 'skin_gold' ? 'color:#ffd700;' : ''}">
-                    <i class="fas ${item.icon}"></i>
-                </div>
-                <div class="shop-info">
-                    <div class="shop-name">${item.name}</div>
-                    <div class="shop-desc">${item.desc}</div>
-                </div>
-                <button class="${btnClass}" onclick="buyShopItem('${item.id}', 'skin')" ${equipped ? 'disabled' : ''}>
-                    ${btnText}
-                </button>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = `
-        <div class="shop-section-title" style="margin:10px 0; font-weight:bold; color:var(--accent-primary);">Kuchaytirgichlar</div>
-        ${boostersHtml}
-        <div class="shop-section-title" style="margin:20px 0 10px; font-weight:bold; color:var(--accent-primary);">Skinlar</div>
-        ${skinsHtml}
-    `;
-}
-
-// ===========================================
-// SUPABASE CLIENT
-// ===========================================
-
-let supabaseClient = null;
-let supabaseConnected = false;
-
-async function initSupabase() {
-    try {
-        if (window.supabase) {
-            supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+            const effects = state.get('activeEffects') || [];
+            const existing = effects.find(e => e.id === id);
             
-            // Test connection
-            const { data, error } = await supabaseClient.from('users').select('count').limit(1);
+            let newEffects;
+            const now = Date.now();
             
-            if (error) {
-                console.warn('Supabase connection test failed:', error.message);
-                showConnectionStatus('offline');
-                supabaseConnected = false;
+            if (existing) {
+                // Extend duration
+                newEffects = effects.map(e => e.id === id ? { ...e, endTime: e.endTime + item.duration * 1000 } : e);
             } else {
-                console.log('Supabase connected successfully');
-                showConnectionStatus('online');
-                supabaseConnected = true;
-            }
-            return true;
-        }
-    } catch (error) {
-        console.error('Supabase init error:', error);
-        showConnectionStatus('offline');
-        supabaseConnected = false;
-    }
-    return false;
-}
-
-function showConnectionStatus(status) {
-    let indicator = document.getElementById('connectionIndicator');
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'connectionIndicator';
-        indicator.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.3s ease;
-        `;
-        document.body.appendChild(indicator);
-    }
-    
-    if (status === 'online') {
-        indicator.innerHTML = '<span style="width:8px;height:8px;background:#10B981;border-radius:50%;"></span> Online';
-        indicator.style.background = 'rgba(16, 185, 129, 0.2)';
-        indicator.style.color = '#10B981';
-        indicator.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-        setTimeout(() => indicator.style.opacity = '0', 3000);
-    } else {
-        indicator.innerHTML = '<span style="width:8px;height:8px;background:#EF4444;border-radius:50%;"></span> Offline';
-        indicator.style.background = 'rgba(239, 68, 68, 0.2)';
-        indicator.style.color = '#EF4444';
-        indicator.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-        indicator.style.opacity = '1';
-    }
-}
-
-async function retrySupabaseConnection() {
-    showConnectionStatus('connecting');
-    await initSupabase();
-    if (supabaseConnected) {
-        await loadUserData();
-        updateUI();
-    }
-}
-
-// ===========================================
-// TELEGRAM WEBAPP
-// ===========================================
-
-function initTelegram() {
-    try {
-        if (window.Telegram?.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            
-            // Apply theme
-            document.documentElement.style.setProperty('--tg-theme-bg', tg.themeParams.bg_color || '#0a0a0f');
-            
-            // Get user data
-            if (tg.initDataUnsafe?.user) {
-                AppState.telegramUser = tg.initDataUnsafe.user;
-                console.log('Telegram user:', AppState.telegramUser);
+                newEffects = [...effects, { id, endTime: now + item.duration * 1000 }];
             }
             
-            return true;
-        }
-    } catch (error) {
-        console.error('Telegram init error:', error);
-    }
-    return false;
-}
-
-// ===========================================
-// REFERRAL SYSTEM
-// ===========================================
-
-function generateReferralCode(uid) {
-    return `NXS${uid || Math.floor(Math.random() * 999999)}`;
-}
-
-function getReferralLink() {
-    const code = AppState.user?.referral_code;
-    if (!code) return `https://t.me/${CONFIG.BOT_USERNAME}`;
-    return `https://t.me/${CONFIG.BOT_USERNAME}?start=${code}`;
-}
-
-async function handleReferral(startParam) {
-    if (!startParam || !supabaseClient || !AppState.user) return;
-    
-    // Don't refer yourself
-    if (startParam === AppState.user.referral_code) return;
-    
-    // Check if already referred
-    if (AppState.user.referred_by) return;
-    
-    try {
-        // Find inviter
-        const { data: inviter, error } = await supabaseClient
-            .from('users')
-            .select('id, referrals_count')
-            .eq('referral_code', startParam)
-            .single();
-            
-        if (error || !inviter) return;
-        
-        // Register referral
-        const { error: refError } = await supabaseClient
-            .from('referrals')
-            .insert({
-                inviter_id: inviter.id,
-                invitee_id: AppState.user.user_id,
-                status: 'completed'
+            state.update({
+                gameCoins: gameCoins - item.cost,
+                activeEffects: newEffects
             });
-            
-        if (refError) return; // Maybe unique violation if already exists
-        
-        // Update user's referred_by
-        await supabaseClient
-            .from('users')
-            .update({ referred_by: inviter.id })
-            .eq('id', AppState.user.user_id);
-            
-        // Reward inviter (XP and Gold)
-        const REWARD_XP = 1000;
-        const REWARD_GOLD = 500;
-        
-        await supabaseClient.rpc('add_xp', { 
-            p_user_id: inviter.id, 
-            p_amount: REWARD_XP 
-        });
-        
-        await supabaseClient.rpc('add_gold', { 
-            p_user_id: inviter.id, 
-            p_amount: REWARD_GOLD 
-        });
-        
-        // Update inviter count
-        await supabaseClient
-            .from('users')
-            .update({ referrals_count: (inviter.referrals_count || 0) + 1 })
-            .eq('id', inviter.id);
-            
-        // Reward invitee (User)
-        await addXP(500, 'referral_bonus');
-        await addGold(200, 'referral_bonus');
-        showToast('Referral Bonus', '500 XP va 200 Gold qo\'shildi!', 'success');
-        
-    } catch (e) {
-        console.error('Referral error:', e);
-    }
-}
-
-async function copyReferralLink() {
-    const link = getReferralLink();
-    try {
-        await navigator.clipboard.writeText(link);
-        showToast('Nusxalandi', 'Havola nusxalandi!', 'success');
-    } catch (e) {
-        showToast('Xatolik', 'Nusxalab bo\'lmadi', 'error');
-    }
-}
-
-// ===========================================
-// USER MANAGEMENT
-// ===========================================
-
-async function loadUserData() {
-    if (!supabaseClient || !AppState.telegramUser) {
-        // Use mock data for testing
-        AppState.user = {
-            user_id: AppState.telegramUser?.id || 12345,
-            full_name: AppState.telegramUser?.first_name || 'Test User',
-            xp: 1250,
-            gold: 45,
-            level: 3,
-            streak_count: 7,
-            is_premium: false,
-            premium_type: 'free',
-            quiz_count_today: 3,
-            referral_code: 'NXS12345',
-            referrals_count: 5,
-            created_at: new Date().toISOString()
-        };
-        return;
-    }
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('users')
-            .select('*')
-            .eq('id', AppState.telegramUser.id)
-            .single();
-        
-        if (error && error.code !== 'PGRST116') {
-            throw error;
-        }
-        
-        if (data) {
-            AppState.user = data;
-            AppState.user.user_id = data.id;
-            
-            // Ensure referral code exists
-            if (!data.referral_code) {
-                const newCode = generateReferralCode(data.id);
-                await supabaseClient.from('users').update({ referral_code: newCode }).eq('id', data.id);
-                AppState.user.referral_code = newCode;
-            }
-            
-            // Load Dark Matter
-            if (data.dark_matter) {
-                AppState.mining.darkMatter = data.dark_matter;
-                AppState.mining.multiplier = 1 + (data.dark_matter * 0.1);
-            } else {
-                AppState.mining.darkMatter = 0;
-            }
-            
-        } else {
-            // Create new user
-            const userId = AppState.telegramUser.id;
-            const newUser = {
-                id: userId,
-                full_name: AppState.telegramUser.first_name,
-                username: AppState.telegramUser.username || null,
-                xp: 0,
-                gold: 0,
-                level: 1,
-                streak_count: 0,
-                is_premium: false,
-                premium_type: 'free',
-                quiz_count_today: 0,
-                referral_code: generateReferralCode(userId)
-            };
-            
-            const { data: created, error: createError } = await supabaseClient
-                .from('users')
-                .insert(newUser)
-                .select()
-                .single();
-            
-            if (createError) throw createError;
-            AppState.user = created;
-            AppState.user.user_id = created.id;
-        }
-        
-        // Handle pending referral if start param exists
-        if (window.Telegram?.WebApp?.initDataUnsafe?.start_param) {
-            await handleReferral(window.Telegram.WebApp.initDataUnsafe.start_param);
-        }
-        
-    } catch (error) {
-        console.error('Load user error:', error);
-        // Fallback to local data
-        AppState.user = {
-            id: AppState.telegramUser?.id || 12345,
-            user_id: AppState.telegramUser?.id || 12345,
-            full_name: AppState.telegramUser?.first_name || 'User',
-            xp: 0,
-            gold: 0,
-            level: 1,
-            streak_count: 0,
-            is_premium: false,
-            premium_type: 'free',
-            quiz_count_today: 0,
-            referrals_count: 0
-        };
-    }
-}
-
-async function updateUserStats(updates) {
-    if (!supabaseClient || !AppState.user) return;
-    
-    try {
-        const { error } = await supabaseClient
-            .from('users')
-            .update(updates)
-            .eq('id', AppState.user.user_id);
-        
-        if (error) throw error;
-        
-        // Update local state
-        Object.assign(AppState.user, updates);
-        updateUI();
-    } catch (error) {
-        console.error('Update user error:', error);
-    }
-}
-
-// ===========================================
-// RPG SYNC SYSTEM
-// ===========================================
-
-// Level thresholds (must match bot's LEVEL_THRESHOLDS)
-const LEVEL_THRESHOLDS = {
-    1: 0, 2: 100, 3: 300, 4: 600, 5: 1000,
-    6: 1500, 7: 2100, 8: 2800, 9: 3600, 10: 4500,
-    11: 5500, 12: 6600, 13: 7800, 14: 9100, 15: 10500,
-    16: 12000, 17: 13600, 18: 15300, 19: 17100, 20: 19000,
-    21: 21000, 22: 23100, 23: 25300, 24: 27600, 25: 30000,
-    26: 33000, 27: 36500, 28: 40500, 29: 45000, 30: 50000
-};
-
-const LEVEL_NAMES = {
-    1: "🌱 Yangi boshlovchi", 2: "🌿 Boshlang'ich", 3: "🌳 O'rganuvchi",
-    4: "📖 Kitobxon", 5: "📚 Bilimdon", 6: "🎯 Faol",
-    7: "⭐ Yulduz", 8: "🌟 Yorqin Yulduz", 9: "💫 Super Yulduz",
-    10: "🔥 Olovli", 11: "🔥 Alanga", 12: "🔥 Vulqon",
-    13: "💎 Olmos", 14: "💎 Brilliant", 15: "💎 Nodir",
-    16: "🏆 Chempion", 17: "🏆 G'olib", 18: "🏆 Qahramon",
-    19: "👑 Shoh", 20: "👑 Imperator", 21: "👑 Afsonaviy",
-    22: "🌌 Kosmik", 23: "🌌 Galaktik", 24: "🌌 Universal",
-    25: "🔮 Sehrgar", 26: "🔮 Arxisehrgar", 27: "🔮 Afsonaviy Sehrgar",
-    28: "⚡ Titan", 29: "⚡ Olimp", 30: "⚡ Xudo"
-};
-
-function calculateLevel(xp) {
-    let level = 1;
-    let levelXP = 0;
-    let nextLevelXP = 100;
-    
-    for (let lvl = 30; lvl >= 1; lvl--) {
-        if (xp >= LEVEL_THRESHOLDS[lvl]) {
-            level = lvl;
-            levelXP = xp - LEVEL_THRESHOLDS[lvl];
-            nextLevelXP = (LEVEL_THRESHOLDS[lvl + 1] || LEVEL_THRESHOLDS[30]) - LEVEL_THRESHOLDS[lvl];
-            break;
+            showToast(`${item.name} faollashdi!`, 'success');
         }
     }
     
-    return {
-        level,
-        name: LEVEL_NAMES[level] || `Level ${level}`,
-        levelXP,
-        nextLevelXP,
-        percent: Math.min(100, Math.round((levelXP / nextLevelXP) * 100))
-    };
-}
-
-async function addXP(amount, source = 'quiz') {
-    if (!AppState.user) return;
-    
-    const newXP = (AppState.user.xp || 0) + amount;
-    const levelInfo = calculateLevel(newXP);
-    const oldLevel = AppState.user.level || 1;
-    
-    // Update state
-    AppState.user.xp = newXP;
-    AppState.user.level = levelInfo.level;
-    
-    // Check for level up
-    if (levelInfo.level > oldLevel) {
-        showToast('🎉 Level Up!', `Siz ${levelInfo.name} darajasiga ko'tarildingiz!`, 'success');
-        triggerFeedback('levelup');
-        
-        // Bonus gold for level up
-        const bonusGold = levelInfo.level * 5;
-        await addGold(bonusGold, 'level_up');
-    }
-    
-    // Sync to Supabase
-    await updateUserStats({
-        xp: newXP,
-        level: levelInfo.level
-    });
-    
-    showToast('+' + amount + ' XP', `${source} uchun`, 'success');
-    triggerFeedback('success');
-    
-    // Check Achievements and Challenges
-    checkAchievements();
-    if (source === 'quiz') updateChallengeProgress('quiz', 1);
-}
-
-async function addGold(amount, source = 'mining') {
-    if (!AppState.user) return;
-    
-    const newGold = (AppState.user.gold || 0) + amount;
-    AppState.user.gold = newGold;
-    
-    // Sync to Supabase
-    await updateUserStats({ gold: newGold });
-    
-    if (amount > 0) {
-        showToast('+' + amount + ' Gold', `${source} uchun`, 'success');
-        triggerFeedback('success');
-    }
-}
-
-async function loadMiningData() {
-    if (!supabaseClient || !AppState.user) return;
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('mining_data')
-            .select('*')
-            .eq('user_id', AppState.user.user_id)
-            .single();
-        
-        if (data) {
-            AppState.mining.balance = data.balance || 0;
-            AppState.mining.energy = data.energy || CONFIG.MAX_ENERGY;
-            AppState.mining.maxEnergy = data.max_energy || CONFIG.MAX_ENERGY;
-            AppState.mining.tapPower = data.tap_power || 1;
-            // Multiplier comes from Dark Matter (user table), not mining_data
-            // AppState.mining.multiplier = data.multiplier || 1; 
-            
-            AppState.mining.autoTapRate = data.taps_per_second || 0;
-            AppState.mining.critChance = data.critical_chance || 5;
-            
-            if (data.upgrades) AppState.mining.upgrades = data.upgrades;
-            if (data.owned_skins) AppState.mining.ownedSkins = data.owned_skins;
-            if (data.current_skin) AppState.mining.currentSkin = data.current_skin;
-        }
-    } catch (error) {
-        console.error('Load mining data error:', error);
-    }
-}
-
-async function claimMiningReward() {
-    const reward = Math.floor(AppState.mining.balance);
-    if (reward < 100) {
-        showToast('Kam balans', 'Kamida 100 Gold kerak', 'error');
-        return;
-    }
-    
-    // Convert balance to gold
-    const goldReward = Math.floor(reward / 100);
-    await addGold(goldReward, 'mining');
-    
-    // Reset balance
-    AppState.mining.balance = 0;
+    haptic('success');
+    audio.play('upgrade');
+    renderShopModal(); // Re-render to show updated buttons
     updateUI();
-    
-    // Sync
-    if (supabaseClient) {
-        await supabaseClient.from('mining_data').upsert({
-            user_id: AppState.user.user_id,
-            balance: 0,
-            updated_at: new Date().toISOString()
-        });
-    }
 }
 
-// Subscribe to real-time user updates
-function subscribeToUserUpdates() {
-    if (!supabaseClient || !AppState.user) return;
-    
-    const channel = supabaseClient
-        .channel('user_updates')
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'users',
-            filter: `id=eq.${AppState.user.user_id}`
-        }, (payload) => {
-            console.log('User updated:', payload.new);
-            Object.assign(AppState.user, payload.new);
-            updateUI();
-        })
-        .subscribe();
-    
-    return channel;
+function getUpgradeCost(type) {
+    const upgrade = UPGRADES[type];
+    const level = state.get('upgrades')[type];
+    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
 }
 
-// Sync streak count
-async function updateStreak() {
-    if (!AppState.user) return;
+function purchaseUpgrade(type) {
+    const cost = getUpgradeCost(type);
+    const gameCoins = state.get('gameCoins');
     
-    const today = new Date().toISOString().split('T')[0];
-    const lastActive = AppState.user.last_active_date?.split('T')[0];
-    
-    if (lastActive !== today) {
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-        
-        let newStreak;
-        if (lastActive === yesterday) {
-            newStreak = (AppState.user.streak_count || 0) + 1;
-        } else {
-            newStreak = 1;
-        }
-        
-        await updateUserStats({
-            streak_count: newStreak,
-            last_active_date: new Date().toISOString()
-        });
-        
-        if (newStreak > 1) {
-            showToast('🔥 Streak!', `${newStreak} kunlik streak!`, 'success');
-        }
-    }
-}
-
-// RPG sync on app load
-async function syncRPGData() {
-    await loadMiningData();
-    await updateStreak();
-    subscribeToUserUpdates();
-    console.log('RPG data synced');
-}
-
-// Enhanced updateUserStats with error handling
-async function _updateUserStatsEnhanced(updates) {
-    if (!supabaseClient || !AppState.user) return false;
-    
-    try {
-        const { error } = await supabaseClient
-            .from('users')
-            .update(updates)
-            .eq('user_id', AppState.user.user_id);
-        
-        if (error) throw error;
-        Object.assign(AppState.user, updates);
-        updateUI();
-        return true;
-    } catch (error) {
-        console.error('Enhanced update error:', error);
+    if (gameCoins < cost) {
+        showToast('Yetarli coin yo\'q!', 'error');
+        haptic('error');
+        audio.play('error');
         return false;
     }
-}
-
-// ===========================================
-// UI UPDATES
-// ===========================================
-
-// UI Updates handled by AnimationController and state management
-
-
-// ===========================================
-// RECOMMENDATIONS CAROUSEL
-// ===========================================
-
-function initRecommendations() {
-    const carousel = document.getElementById('recommendationCarousel');
-    const dots = document.getElementById('carouselDots');
-    if (!carousel) return;
     
-    carousel.innerHTML = AppState.recommendations.map((rec, i) => `
-        <div class="recommendation-card ${i === 0 ? 'active' : ''}" onclick="navigateTo('${rec.id}')">
-            <div class="recommendation-badge">${rec.badge}</div>
-            <div class="recommendation-icon">
-                <i class="fas ${rec.icon}"></i>
-            </div>
-            <div class="recommendation-content">
-                <div class="recommendation-title">${rec.title}</div>
-                <div class="recommendation-desc">${rec.desc}</div>
-            </div>
-        </div>
-    `).join('');
+    const upgrades = { ...state.get('upgrades') };
+    upgrades[type]++;
     
-    if (dots) {
-        dots.innerHTML = AppState.recommendations.map((_, i) => 
-            `<div class="carousel-dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`
-        ).join('');
-        
-        dots.querySelectorAll('.carousel-dot').forEach(dot => {
-            dot.addEventListener('click', () => {
-                const index = parseInt(dot.dataset.index);
-                scrollToRecommendation(index);
-            });
-        });
-    }
-    
-    // Auto-scroll carousel
-    let currentIndex = 0;
-    setInterval(() => {
-        currentIndex = (currentIndex + 1) % AppState.recommendations.length;
-        scrollToRecommendation(currentIndex);
-    }, 5000);
-}
-
-function scrollToRecommendation(index) {
-    const carousel = document.getElementById('recommendationCarousel');
-    const dots = document.getElementById('carouselDots');
-    if (!carousel) return;
-    
-    const cards = carousel.querySelectorAll('.recommendation-card');
-    const cardWidth = cards[0]?.offsetWidth || 300;
-    
-    carousel.scrollTo({
-        left: index * (cardWidth + 16),
-        behavior: 'smooth'
+    state.update({
+        gameCoins: gameCoins - cost,
+        upgrades
     });
     
-    cards.forEach((card, i) => {
-        card.classList.toggle('active', i === index);
-    });
+    applyUpgradeEffects();
+    showToast(`${UPGRADES[type].name} yangilandi!`, 'success');
+    haptic('success');
+    audio.play('levelUp');
+    renderUpgrades();
+    updateUI();
     
-    if (dots) {
-        dots.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-            dot.classList.toggle('active', i === index);
-        });
-    }
+    return true;
 }
 
-// ===========================================
+function applyUpgradeEffects() {
+    const upgrades = state.get('upgrades');
+    state.update({
+        tapPower: UPGRADES.tapPower.effect(upgrades.tapPower),
+        autoTapRate: UPGRADES.autoTap.effect(upgrades.autoTap),
+        maxEnergy: UPGRADES.energy.effect(upgrades.energy),
+        critChance: UPGRADES.crit.effect(upgrades.crit)
+    });
+}
+
+// ============================================
+// ACHIEVEMENTS SYSTEM
+// ============================================
+const ACHIEVEMENTS = [
+    { id: 'first_tap', name: 'Birinchi qadam', icon: 'fa-shoe-prints', condition: s => s.totalTaps >= 1 },
+    { id: 'tap_100', name: '100 ta tap', icon: 'fa-hand-pointer', condition: s => s.totalTaps >= 100 },
+    { id: 'tap_1000', name: '1000 ta tap', icon: 'fa-hands', condition: s => s.totalTaps >= 1000 },
+    { id: 'tap_10000', name: '10000 ta tap', icon: 'fa-fire', condition: s => s.totalTaps >= 10000 },
+    { id: 'gold_1000', name: '1000 coin', icon: 'fa-coins', condition: s => s.totalGoldEarned >= 1000 },
+    { id: 'gold_10000', name: '10000 coin', icon: 'fa-sack-dollar', condition: s => s.totalGoldEarned >= 10000 },
+    { id: 'gold_100000', name: '100000 coin', icon: 'fa-gem', condition: s => s.totalGoldEarned >= 100000 },
+    { id: 'level_5', name: '5-daraja', icon: 'fa-star', condition: s => s.level >= 5 },
+    { id: 'level_10', name: '10-daraja', icon: 'fa-crown', condition: s => s.level >= 10 },
+    { id: 'streak_3', name: '3 kunlik streak', icon: 'fa-fire', condition: s => s.streak >= 3 },
+    { id: 'streak_7', name: '7 kunlik streak', icon: 'fa-fire-flame-curved', condition: s => s.streak >= 7 },
+    { id: 'prestige_1', name: 'Birinchi Prestige', icon: 'fa-atom', condition: s => s.prestigeLevel >= 1 },
+    { id: 'quiz_10', name: '10 ta quiz', icon: 'fa-brain', condition: s => s.quizStats.total >= 10 },
+    { id: 'quiz_perfect', name: 'Mukammal quiz', icon: 'fa-trophy', condition: s => s.quizStats.streak >= 10 }
+];
+
+function checkAchievements() {
+    const unlocked = state.get('achievements');
+    const stateData = state.state;
+    
+    ACHIEVEMENTS.forEach(ach => {
+        if (!unlocked.includes(ach.id) && ach.condition(stateData)) {
+            unlocked.push(ach.id);
+            state.set('achievements', unlocked);
+            showToast(`🏆 Yutuq: ${ach.name}`, 'success');
+            haptic('success');
+            audio.play('achievement');
+        }
+    });
+}
+
+// ============================================
+// DAILY CHALLENGES
+// ============================================
+function generateDailyChallenges() {
+    const today = new Date().toDateString();
+    const lastReset = state.get('lastChallengeReset');
+    
+    if (lastReset === today) return;
+    
+    const challenges = [
+        { id: 'tap_500', name: '500 ta tap', target: 500, progress: 0, reward: 500, type: 'taps' },
+        { id: 'earn_2000', name: '2000 coin yig\'ish', target: 2000, progress: 0, reward: 300, type: 'gold' },
+        { id: 'quiz_3', name: '3 ta quiz o\'ynash', target: 3, progress: 0, reward: 400, type: 'quiz' },
+        { id: 'upgrade_1', name: '1 ta upgrade olish', target: 1, progress: 0, reward: 200, type: 'upgrade' }
+    ];
+    
+    state.update({
+        dailyChallenges: challenges,
+        lastChallengeReset: today
+    });
+}
+
+function updateChallengeProgress(type, amount = 1) {
+    const challenges = state.get('dailyChallenges').map(c => {
+        if (c.type === type && c.progress < c.target) {
+            c.progress = Math.min(c.progress + amount, c.target);
+        }
+        return c;
+    });
+    state.set('dailyChallenges', challenges);
+    renderChallenges();
+}
+
+function claimChallengeReward(id) {
+    const challenges = state.get('dailyChallenges');
+    const challenge = challenges.find(c => c.id === id);
+    
+    if (!challenge || challenge.progress < challenge.target || challenge.claimed) return;
+    
+    challenge.claimed = true;
+    state.update({
+        dailyChallenges: challenges,
+        gameCoins: state.get('gameCoins') + challenge.reward
+    });
+    
+    showToast(`+${challenge.reward} coin!`, 'success');
+    haptic('success');
+    audio.play('achievement');
+    renderChallenges();
+    updateUI();
+}
+
+// ============================================
+// LEADERBOARD (Simulated)
+// ============================================
+const AI_PLAYERS = [
+    { name: 'CryptoMaster', score: 0 },
+    { name: 'TapKing', score: 0 },
+    { name: 'GoldHunter', score: 0 },
+    { name: 'NexusPro', score: 0 },
+    { name: 'SpeedTapper', score: 0 },
+    { name: 'DiamondHands', score: 0 },
+    { name: 'MoonWalker', score: 0 },
+    { name: 'StarGazer', score: 0 }
+];
+
+function updateLeaderboard() {
+    const userScore = state.get('xp'); // Use global XP for leaderboard
+    
+    AI_PLAYERS.forEach(player => {
+        player.score += Math.floor(Math.random() * 50); // XP growth simulation
+        if (player.score < userScore * 0.8) {
+            player.score = Math.floor(userScore * (0.8 + Math.random() * 0.4));
+        }
+    });
+    
+    const leaderboard = [
+        { name: state.get('user').name, score: userScore, isUser: true },
+        ...AI_PLAYERS
+    ].sort((a, b) => b.score - a.score);
+    
+    return leaderboard;
+}
+
+// ============================================
+// PRESTIGE SYSTEM
+// ============================================
+function canPrestige() {
+    return state.get('totalGoldEarned') >= CONFIG.PRESTIGE_THRESHOLD;
+}
+
+function calculatePrestigeReward() {
+    const total = state.get('totalGoldEarned');
+    return Math.floor(Math.sqrt(total / 1000));
+}
+
+function doPrestige() {
+    if (!canPrestige()) return;
+    
+    const reward = calculatePrestigeReward();
+    const newPrestigeLevel = state.get('prestigeLevel') + 1;
+    
+    state.update({
+        gameCoins: 0,
+        // XP and Level are global and NOT reset
+        energy: 1000,
+        maxEnergy: 1000,
+        tapPower: 1,
+        autoTapRate: 0,
+        critChance: 5,
+        // totalTaps and totalGoldEarned kept for achievements? Or reset? 
+        // Usually prestige resets progress but keeps achievements.
+        // Let's reset mining progress stats but assume achievements are permanent.
+        // totalTaps: 0, // Maybe keep stats?
+        // totalGoldEarned: 0, // Maybe keep stats? 
+        // For now, let's follow the "hard reset" pattern for mining stats but KEEP GLOBAL XP/Level
+        upgrades: { tapPower: 0, autoTap: 0, energy: 0, crit: 0, luck: 0 },
+        prestigeLevel: newPrestigeLevel,
+        darkMatter: state.get('darkMatter') + reward
+    });
+    
+    showToast(`Prestige! +${reward} Dark Matter`, 'success');
+    haptic('heavy');
+    audio.play('achievement');
+    checkAchievements();
+    updateUI();
+    renderAll();
+}
+
+// ============================================
 // QUIZ SYSTEM
-// ===========================================
+// ============================================
+const QUIZ_QUESTIONS = {
+    general: [
+        { q: "O'zbekiston poytaxti qaysi shahar?", a: ["Toshkent", "Samarqand", "Buxoro", "Xiva"], c: 0 },
+        { q: "Quyosh sistemasida nechta sayyora bor?", a: ["7", "8", "9", "10"], c: 1 },
+        { q: "Eng katta okean qaysi?", a: ["Atlantika", "Tinch", "Hind", "Shimoliy Muz"], c: 1 },
+        { q: "DNA nimaning qisqartmasi?", a: ["Dezoksiribonuklein kislota", "Dinamik nuklein kislota", "Dioksid nuklein", "Dimetil nuklein"], c: 0 },
+        { q: "Birinchi kompyuter qachon yaratilgan?", a: ["1936", "1946", "1956", "1966"], c: 1 }
+    ],
+    science: [
+        { q: "Suvning kimyoviy formulasi?", a: ["H2O", "CO2", "NaCl", "O2"], c: 0 },
+        { q: "Yorug'lik tezligi qancha?", a: ["300,000 km/s", "150,000 km/s", "500,000 km/s", "100,000 km/s"], c: 0 },
+        { q: "Eng og'ir element qaysi?", a: ["Oltin", "Uran", "Osmiy", "Platina"], c: 2 },
+        { q: "Inson tanasida nechta suyak bor?", a: ["206", "186", "226", "256"], c: 0 },
+        { q: "Elektron qanday zaryadga ega?", a: ["Musbat", "Manfiy", "Neytral", "O'zgaruvchan"], c: 1 }
+    ],
+    history: [
+        { q: "Amir Temur qachon tug'ilgan?", a: ["1336", "1346", "1356", "1366"], c: 0 },
+        { q: "Birinchi jahon urushi qachon boshlangan?", a: ["1912", "1914", "1916", "1918"], c: 1 },
+        { q: "Buyuk Ipak yo'li qayerdan boshlanadi?", a: ["Rim", "Xitoy", "Hindiston", "Eron"], c: 1 },
+        { q: "O'zbekiston mustaqilligi qachon e'lon qilindi?", a: ["1990", "1991", "1992", "1993"], c: 1 },
+        { q: "Samarqand necha yoshda?", a: ["2500+", "1500+", "3500+", "1000+"], c: 0 }
+    ],
+    tech: [
+        { q: "HTML nimaning qisqartmasi?", a: ["HyperText Markup Language", "High Tech Modern Language", "Hyper Transfer Mode Link", "Home Tool Markup Language"], c: 0 },
+        { q: "JavaScript kim tomonidan yaratilgan?", a: ["Bill Gates", "Brendan Eich", "Mark Zuckerberg", "Linus Torvalds"], c: 1 },
+        { q: "Birinchi iPhone qachon chiqdi?", a: ["2005", "2006", "2007", "2008"], c: 2 },
+        { q: "Python dasturlash tili qachon yaratilgan?", a: ["1989", "1991", "1995", "2000"], c: 1 },
+        { q: "RAM nimaning qisqartmasi?", a: ["Random Access Memory", "Read Access Memory", "Rapid Access Module", "Real Active Memory"], c: 0 }
+    ],
+    math: [
+        { q: "Pi sonining qiymati taxminan necha?", a: ["3.14", "2.71", "1.41", "1.61"], c: 0 },
+        { q: "2^10 nechaga teng?", a: ["512", "1024", "2048", "256"], c: 1 },
+        { q: "Uchburchak ichki burchaklari yig'indisi?", a: ["180°", "360°", "90°", "270°"], c: 0 },
+        { q: "Fibonachchi ketma-ketligidagi 7-son?", a: ["8", "13", "21", "5"], c: 1 },
+        { q: "Kvadrat ildiz 144 nechaga teng?", a: ["11", "12", "13", "14"], c: 1 }
+    ],
+    language: [
+        { q: "'Hello' so'zi qaysi tilda?", a: ["Ingliz", "Fransuz", "Nemis", "Ispan"], c: 0 },
+        { q: "O'zbek alifbosida nechta harf bor?", a: ["29", "32", "33", "35"], c: 0 },
+        { q: "'Gracias' qaysi tilda 'rahmat'?", a: ["Italyan", "Fransuz", "Ispan", "Portugaliya"], c: 2 },
+        { q: "Dunyoda eng ko'p gaplashiladigan til?", a: ["Ingliz", "Xitoy", "Ispan", "Hindi"], c: 1 },
+        { q: "'Konnichiwa' qaysi tilda salomlashish?", a: ["Koreys", "Xitoy", "Yapon", "Vetnam"], c: 2 }
+    ]
+};
 
-function initQuizOptions() {
-    // Topic selection
-    document.querySelectorAll('#quizTopics .quiz-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            document.querySelectorAll('#quizTopics .quiz-option').forEach(o => o.classList.remove('active'));
-            opt.classList.add('active');
-            AppState.quiz.topic = opt.dataset.topic;
-        });
-    });
-    
-    // Difficulty selection
-    document.querySelectorAll('#quizDifficulty .quiz-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            document.querySelectorAll('#quizDifficulty .quiz-option').forEach(o => o.classList.remove('active'));
-            opt.classList.add('active');
-            AppState.quiz.difficulty = opt.dataset.difficulty;
-        });
-    });
-    
-    // Count selection
-    document.querySelectorAll('#quizCount .quiz-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            if (opt.classList.contains('premium-only') && !AppState.user?.is_premium) {
-                showToast('Premium kerak', 'Bu tanlov premium foydalanuvchilar uchun', 'error');
-                return;
-            }
-            document.querySelectorAll('#quizCount .quiz-option').forEach(o => o.classList.remove('active'));
-            opt.classList.add('active');
-            AppState.quiz.count = parseInt(opt.dataset.count);
-        });
-    });
-}
+let currentQuiz = {
+    category: 'general',
+    difficulty: 'medium',
+    questionCount: 10,
+    questions: [],
+    currentIndex: 0,
+    score: 0,
+    timer: null,
+    timeLeft: 30
+};
 
-async function startQuiz() {
-    if (AppState.quiz.remaining <= 0) {
-        showToast('Limit tugadi', 'Bugungi limitingiz tugadi. Premium olish uchun Premium bo\'limiga o\'ting.', 'error');
-        return;
-    }
-    
-    const btn = document.querySelector('.start-quiz-btn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yuklanmoqda...';
-    }
-    
-    try {
-        // Generate quiz questions (mock for now, would call AI API)
-        const questions = await generateQuizQuestions(
-            AppState.quiz.topic,
-            AppState.quiz.difficulty,
-            AppState.quiz.count
-        );
-        
-        if (!questions || questions.length === 0) {
-            throw new Error('Savollar yaratib bo\'lmadi');
-        }
-        
-        AppState.quiz.questions = questions;
-        AppState.quiz.currentQuestion = 0;
-        AppState.quiz.score = 0;
-        AppState.quiz.answers = [];
-        
-        // Update quiz count
-        await updateUserStats({
-            quiz_count_today: (AppState.user.quiz_count_today || 0) + 1
-        });
-        
-        showQuizQuestion();
-        
-    } catch (error) {
-        console.error('Start quiz error:', error);
-        showToast('Xatolik', error.message || 'Test boshlab bo\'lmadi', 'error');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> Testni boshlash';
-        }
-    }
-}
+function startQuiz(options = null) {
+    let category, difficulty, count;
+    let customQuestions = null;
 
-async function generateQuizQuestions(topic, difficulty, count) {
-    // Determine API base URL (Netlify function or local)
-    const API_BASE = window.location.hostname === 'localhost' 
-        ? 'http://localhost:8888/.netlify/functions'
-        : '/.netlify/functions';
-    
-    try {
-        console.log('🧠 Generating AI quiz...', { topic, difficulty, count });
-        
-        const response = await fetch(`${API_BASE}/ai-quiz`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                topic: topic || 'general',
-                difficulty: difficulty || 'medium',
-                count: count || 5,
-                language: 'uz'
-            })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.quiz?.questions) {
-                console.log('✅ AI Quiz generated:', data.quiz.questions.length, 'questions');
-                triggerFeedback('success');
-                return data.quiz.questions;
-            }
-        }
-        
-        console.warn('AI Quiz API response not ok, using fallback');
-    } catch (error) {
-        console.warn('AI Quiz API failed, using fallback:', error.message);
+    if (options) {
+        category = options.category || 'general';
+        difficulty = options.difficulty || 'medium';
+        count = options.questionCount || 10;
+        customQuestions = options.questions;
+    } else {
+        category = document.querySelector('.category-card.active')?.dataset.category || 'general';
+        difficulty = document.querySelector('.diff-btn.active')?.dataset.diff || 'medium';
+        count = parseInt(document.querySelector('.count-btn.active')?.dataset.count || '10');
     }
     
-    // Fallback - high quality mock questions by topic
-    const mockQuestionsByTopic = {
-        general: [
-            { question: "Quyosh tizimidagi eng katta sayyora qaysi?", options: ["Yer", "Mars", "Yupiter", "Saturn"], correct: 2, explanation: "Yupiter Quyosh tizimidagi eng katta sayyora bo'lib, uning massasi boshqa barcha sayyoralar massasidan 2.5 marta katta." },
-            { question: "Dunyo okeanlaridan qaysi biri eng kattasi?", options: ["Atlantika", "Hind", "Tinch", "Shimoliy Muz"], correct: 2, explanation: "Tinch okeani Yer yuzasining taxminan 30% ni qoplaydi va eng katta okean hisoblanadi." },
-            { question: "Inson tanasidagi eng katta organ qaysi?", options: ["Jigar", "Miya", "Teri", "Yurak"], correct: 2, explanation: "Teri inson tanasidagi eng katta organ bo'lib, kattalar terisining maydoni taxminan 2 kvadrat metrni tashkil etadi." },
-            { question: "Qaysi davlat aholisi eng ko'p?", options: ["AQSH", "Rossiya", "Xitoy", "Hindiston"], correct: 3, explanation: "2023-yildan boshlab Hindiston aholisi Xitoydan o'tib, dunyoda birinchi o'ringa chiqdi." },
-            { question: "Suv qanday haroratda qaynaydi (dengiz sathida)?", options: ["90°C", "100°C", "110°C", "120°C"], correct: 1, explanation: "Toza suv dengiz sathida (1 atmosfera bosimda) 100°C da qaynaydi." }
-        ],
-        science: [
-            { question: "DNK ning to'liq nomi nima?", options: ["Dezoksiribonuklein kislota", "Dinitrogen kislota", "Dihidrogen nukleid", "Dezoksigen nukleotid"], correct: 0, explanation: "DNK - Dezoksiribonuklein kislota, genetik ma'lumotni saqlovchi molekula." },
-            { question: "Yorug'lik vakuumda qanday tezlikda harakat qiladi?", options: ["300,000 km/s", "150,000 km/s", "500,000 km/s", "1,000,000 km/s"], correct: 0, explanation: "Yorug'lik tezligi vakuumda taxminan 299,792 km/s yoki taxminan 300,000 km/s." },
-            { question: "Nyuton qonunlari nechta?", options: ["2", "3", "4", "5"], correct: 1, explanation: "Isaak Nyuton harakat haqida 3 ta asosiy qonunni kashf etgan." },
-            { question: "Atomning markazida nima joylashgan?", options: ["Elektron", "Neytron", "Yadro", "Proton"], correct: 2, explanation: "Atom yadrosida protonlar va neytronlar joylashgan, elektronlar esa yadro atrofida aylanadi." },
-            { question: "Fotosintez jarayonida qaysi gaz ajraladi?", options: ["Karbonat angidrid", "Azot", "Kislorod", "Vodorod"], correct: 2, explanation: "Fotosintez jarayonida o'simliklar karbonat angidridni yutib, kislorod ajratadi." }
-        ],
-        history: [
-            { question: "Birinchi Jahon urushi qachon boshlangan?", options: ["1912", "1914", "1916", "1918"], correct: 1, explanation: "Birinchi Jahon urushi 1914-yil 28-iyulda boshlangan." },
-            { question: "O'zbekiston mustaqilligi qachon e'lon qilindi?", options: ["1990", "1991", "1992", "1993"], correct: 1, explanation: "O'zbekiston Respublikasi mustaqilligi 1991-yil 1-sentabrda e'lon qilindi." },
-            { question: "Amir Temur qachon tug'ilgan?", options: ["1326", "1336", "1346", "1356"], correct: 1, explanation: "Amir Temur 1336-yil 9-aprelda Kesh (hozirgi Shahrisabz) shahrida tug'ilgan." },
-            { question: "Buyuk Ipak yo'li qaysi asrlarda faol bo'lgan?", options: ["Miloddan avvalgi 2-asr - milodiy 15-asr", "Milodiy 5-10 asrlar", "Milodiy 15-20 asrlar", "Miloddan avvalgi 5-1 asrlar"], correct: 0, explanation: "Buyuk Ipak yo'li miloddan avvalgi 2-asrdan milodiy 15-asrgacha faol savdo yo'li bo'lgan." },
-            { question: "Birinchi odamni kosmosga kim uchirgan?", options: ["AQSH", "SSSR", "Xitoy", "Yaponiya"], correct: 1, explanation: "1961-yil 12-aprelda SSSR kosmnavti Yuriy Gagarin birinchi inson sifatida kosmosga uchgan." }
-        ],
-        tech: [
-            { question: "Python dasturlash tilini kim yaratgan?", options: ["Guido van Rossum", "James Gosling", "Bjarne Stroustrup", "Dennis Ritchie"], correct: 0, explanation: "Python tilini Guido van Rossum 1991-yilda yaratgan." },
-            { question: "HTML ning to'liq nomi nima?", options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyper Transfer Markup Logic", "Home Tool Markup Language"], correct: 0, explanation: "HTML - Hyper Text Markup Language, veb-sahifalar yaratish uchun ishlatiladigan til." },
-            { question: "Dunyodagi birinchi kompyuter qaysi?", options: ["ENIAC", "IBM PC", "Apple I", "Commodore 64"], correct: 0, explanation: "ENIAC (1945) birinchi umumiy maqsadli elektron kompyuter hisoblanadi." },
-            { question: "JavaScript qaysi yilda yaratilgan?", options: ["1990", "1995", "2000", "2005"], correct: 1, explanation: "JavaScript 1995-yilda Brendan Eich tomonidan yaratilgan." },
-            { question: "Git versiya nazorat tizimini kim yaratgan?", options: ["Bill Gates", "Linus Torvalds", "Mark Zuckerberg", "Steve Jobs"], correct: 1, explanation: "Git tizimini Linus Torvalds 2005-yilda Linux yadrosini boshqarish uchun yaratgan." }
-        ],
-        math: [
-            { question: "Pi (π) sonining taxminiy qiymati qancha?", options: ["3.14", "2.71", "1.41", "1.61"], correct: 0, explanation: "Pi soni taxminan 3.14159... ga teng, odatda 3.14 deb yaxlitlanadi." },
-            { question: "Fibonachchi ketma-ketligida 1, 1, 2, 3, 5 dan keyin qaysi son keladi?", options: ["6", "7", "8", "9"], correct: 2, explanation: "Fibonachchi ketma-ketligida har bir son oldingi ikki sonning yig'indisiga teng: 3+5=8." },
-            { question: "Kvadrat tenglamaning umumiy ko'rinishi qanday?", options: ["ax + b = 0", "ax² + bx + c = 0", "ax³ + bx² + cx + d = 0", "a/x + b = 0"], correct: 1, explanation: "Kvadrat tenglama ax² + bx + c = 0 ko'rinishida bo'ladi, bu yerda a ≠ 0." },
-            { question: "1 dan 100 gacha sonlar yig'indisi qancha?", options: ["5000", "5050", "5100", "5500"], correct: 1, explanation: "Gauss formulasi bo'yicha: n(n+1)/2 = 100×101/2 = 5050." },
-            { question: "Logarifm asosi 10 bo'lsa, u qanday ataladi?", options: ["Natural logarifm", "O'nli logarifm", "Ikkilik logarifm", "Eksponent logarifm"], correct: 1, explanation: "Asosi 10 bo'lgan logarifm o'nli (decimal) logarifm deyiladi va lg bilan belgilanadi." }
-        ]
+    let questions;
+    if (customQuestions) {
+        questions = [...customQuestions];
+    } else if (category === 'mixed' || difficulty === 'adaptive') {
+        // Combine all questions for adaptive/mixed mode
+        questions = [
+            ...QUIZ_QUESTIONS.general,
+            ...QUIZ_QUESTIONS.science,
+            ...QUIZ_QUESTIONS.history,
+            ...QUIZ_QUESTIONS.tech,
+            ...QUIZ_QUESTIONS.math,
+            ...QUIZ_QUESTIONS.language
+        ];
+    } else {
+        questions = [...(QUIZ_QUESTIONS[category] || QUIZ_QUESTIONS.general)];
+    }
+    
+    shuffleArray(questions);
+    
+    currentQuiz = {
+        category,
+        difficulty,
+        questionCount: Math.min(count, questions.length),
+        questions: questions.slice(0, Math.min(count, questions.length)),
+        currentIndex: 0,
+        score: 0,
+        timer: null,
+        timeLeft: difficulty === 'easy' ? 45 : difficulty === 'hard' ? 20 : 30
     };
     
-    // Get questions for the topic or use general
-    const topicQuestions = mockQuestionsByTopic[topic] || mockQuestionsByTopic.general;
+    document.querySelector('.quiz-container').style.display = 'none';
+    document.getElementById('quizGame').style.display = 'block';
+    document.getElementById('quizResults').style.display = 'none';
     
-    // Shuffle and return requested count
-    const shuffled = [...topicQuestions].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, Math.min(count, shuffled.length));
+    showQuestion();
+    startTimer();
+    haptic('medium');
+    
+    if (document.getElementById('modalOverlay').classList.contains('active')) {
+        closeModal();
+    }
 }
 
-function showQuizQuestion() {
-    const questions = AppState.quiz.questions;
-    const index = AppState.quiz.currentQuestion;
-    
-    if (index >= questions.length) {
-        showQuizResults();
-        return;
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    
-    const question = questions[index];
-    const section = document.getElementById('sectionQuiz');
-    
-    section.innerHTML = `
-        <div class="quiz-active glass-card">
-            <div class="quiz-progress">
-                <div class="quiz-progress-text">Savol ${index + 1}/${questions.length}</div>
-                <div class="quiz-progress-bar">
-                    <div class="quiz-progress-fill" style="width: ${((index + 1) / questions.length) * 100}%"></div>
-                </div>
-            </div>
-            
-            <div class="quiz-question-text">${question.question}</div>
-            
-            <div class="quiz-answers">
-                ${question.options.map((opt, i) => `
-                    <div class="quiz-option" onclick="selectQuizAnswer(${i})">
-                        <span class="option-letter">${String.fromCharCode(65 + i)}</span>
-                        <span class="option-text">${opt}</span>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
 }
 
-function selectQuizAnswer(index) {
-    const questions = AppState.quiz.questions;
-    const currentQ = questions[AppState.quiz.currentQuestion];
-    const isCorrect = index === currentQ.correct;
+function showQuestion() {
+    const q = currentQuiz.questions[currentQuiz.currentIndex];
+    if (!q) return endQuiz();
     
-    // Disable all options
-    const options = document.querySelectorAll('.quiz-answers .quiz-option');
-    options.forEach(o => o.style.pointerEvents = 'none');
+    document.getElementById('quizProgress').textContent = `${currentQuiz.currentIndex + 1}/${currentQuiz.questionCount}`;
+    document.getElementById('quizQuestion').textContent = q.q;
     
-    // Mark answer
-    options[index].classList.add(isCorrect ? 'correct' : 'wrong');
-    if (!isCorrect) {
-        options[currentQ.correct].classList.add('correct');
-    }
+    const answersEl = document.getElementById('quizAnswers');
+    answersEl.innerHTML = q.a.map((a, i) => `
+        <div class="quiz-answer" data-index="${i}">${a}</div>
+    `).join('');
     
-    // Visual effects
-    if (isCorrect) {
-        createConfetti();
-        AppState.quiz.score++;
-    } else {
-        options[index].classList.add('shake-animation');
-    }
-    
-    // Store answer
-    AppState.quiz.answers.push({
-        question: currentQ.question,
-        answer: currentQ.options[index],
-        correct: currentQ.options[currentQ.correct],
-        isCorrect
+    answersEl.querySelectorAll('.quiz-answer').forEach(el => {
+        el.addEventListener('click', () => selectAnswer(parseInt(el.dataset.index)));
     });
+}
+
+function selectAnswer(index) {
+    if (currentQuiz.answered) return;
+    currentQuiz.answered = true;
     
-    // Next question after delay
+    clearInterval(currentQuiz.timer);
+    
+    const q = currentQuiz.questions[currentQuiz.currentIndex];
+    const answers = document.querySelectorAll('.quiz-answer');
+    
+    answers[q.c].classList.add('correct');
+    
+    if (index === q.c) {
+        currentQuiz.score++;
+        haptic('success');
+        audio.play('tap');
+    } else {
+        if (index >= 0 && answers[index]) {
+            answers[index].classList.add('wrong');
+        }
+        haptic('error');
+        audio.play('error');
+    }
+    
     setTimeout(() => {
-        AppState.quiz.currentQuestion++;
-        showQuizQuestion();
+        currentQuiz.currentIndex++;
+        currentQuiz.answered = false;
+        
+        if (currentQuiz.currentIndex < currentQuiz.questionCount) {
+            currentQuiz.timeLeft = currentQuiz.difficulty === 'easy' ? 45 : currentQuiz.difficulty === 'hard' ? 20 : 30;
+            showQuestion();
+            startTimer();
+        } else {
+            endQuiz();
+        }
     }, 1500);
 }
 
-function showQuizResults() {
-    const score = AppState.quiz.score;
-    const total = AppState.quiz.questions.length;
-    const percent = Math.round((score / total) * 100);
+function startTimer() {
+    const timerEl = document.querySelector('#quizTimer span');
+    timerEl.textContent = currentQuiz.timeLeft;
     
-    // Calculate XP
-    const xpEarned = score * 10 + (percent >= 80 ? 20 : 0);
-    
-    // Update results modal
-    document.getElementById('resultTitle').textContent = percent >= 80 ? 'Ajoyib!' : percent >= 50 ? 'Yaxshi!' : 'Harakat qiling!';
-    document.getElementById('resultSubtitle').textContent = `${score}/${total} to'g'ri javob`;
-    document.getElementById('resultCorrect').textContent = score;
-    document.getElementById('resultWrong').textContent = total - score;
-    document.getElementById('resultXP').textContent = '+' + xpEarned;
-    
-    // Show modal
-    document.getElementById('resultsModal').classList.add('active');
-    
-    // Add XP
-    addXP(xpEarned, 'quiz');
-    
-    // Reset quiz section
-    setTimeout(() => {
-        navigateTo('quiz');
-    }, 500);
+    currentQuiz.timer = setInterval(() => {
+        currentQuiz.timeLeft--;
+        timerEl.textContent = currentQuiz.timeLeft;
+        
+        if (currentQuiz.timeLeft <= 0) {
+            clearInterval(currentQuiz.timer);
+            selectAnswer(-1);
+        }
+    }, 1000);
 }
 
-// ===========================================
-// ===========================================
-
-function initMining() {
-    const tapArea = document.getElementById('tapArea');
-    if (!tapArea) return;
+function endQuiz() {
+    clearInterval(currentQuiz.timer);
     
-    tapArea.addEventListener('click', handleTap);
-    tapArea.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleTap(e);
+    const accuracy = Math.round((currentQuiz.score / currentQuiz.questionCount) * 100);
+    const xpEarned = currentQuiz.score * 50;
+    
+    document.getElementById('quizGame').style.display = 'none';
+    document.getElementById('quizResults').style.display = 'block';
+    
+    document.getElementById('resultsScore').textContent = `${currentQuiz.score}/${currentQuiz.questionCount}`;
+    document.getElementById('resultsAccuracy').textContent = `${accuracy}% aniqlik`;
+    document.getElementById('resultsXP').textContent = `+${xpEarned} XP`;
+    
+    const quizStats = state.get('quizStats');
+    state.update({
+        xp: state.get('xp') + xpEarned,
+        quizStats: {
+            total: quizStats.total + 1,
+            correct: quizStats.correct + currentQuiz.score,
+            streak: accuracy === 100 ? quizStats.streak + 1 : 0
+        }
     });
     
-    // Start energy regeneration
-    setInterval(regenerateEnergy, 1000);
+    updateChallengeProgress('quiz', 1);
+    checkAchievements();
+    checkLevelUp();
+    updateUI();
+    
+    haptic('success');
+    audio.play('achievement');
 }
 
-// handleTap replaced by AnimationController version
+function closeQuiz() {
+    clearInterval(currentQuiz.timer);
+    document.getElementById('quizGame').style.display = 'none';
+    document.getElementById('quizResults').style.display = 'none';
+    document.querySelector('.quiz-container').style.display = 'block';
+}
 
+// ============================================
+// MINING GAME
+// ============================================
+let particles = null;
+let meshGradient = null;
 
-function createTapEffect(e, textOverride = null) {
-    const tapCircle = document.querySelector('.tap-circle');
-    if (!tapCircle) return;
-    
-    // Pulse animation
-    tapCircle.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-        tapCircle.style.transform = 'scale(1)';
-    }, 100);
-    
-    // Floating number
-    const floater = document.createElement('div');
-    const value = AppState.mining.tapPower * AppState.mining.multiplier; // Display base value or actual?
-    // Let's display the textOverride if present (CRIT!) or the number
-    
-    if (textOverride) {
-        floater.textContent = textOverride;
-        floater.style.color = '#ff006e';
-        floater.style.fontSize = '24px';
-    } else {
-        floater.textContent = '+' + formatNumber(Math.floor(value));
-        floater.style.color = 'var(--accent-gold)';
+function handleTap(e) {
+    const energy = state.get('energy');
+    if (energy <= 0) {
+        showToast('Energiya tugadi!', 'warning');
+        haptic('error');
+        return;
     }
-
-    floater.style.cssText = `
-        position: absolute;
-        font-size: ${textOverride ? '24px' : '20px'};
-        font-weight: bold;
-        color: ${textOverride ? '#ff006e' : 'var(--accent-gold)'};
-        pointer-events: none;
-        animation: floatUp 1s ease-out forwards;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-        text-shadow: 0 0 10px rgba(0,0,0,0.5);
-    `;
     
-    tapCircle.appendChild(floater);
-    setTimeout(() => floater.remove(), 1000);
+    audio.init();
+    
+    const isCritical = Math.random() * 100 < getEffectiveStat('critChance');
+    const baseGold = state.get('tapPower');
+    const goldEarned = isCritical ? baseGold * state.get('critMultiplier') : baseGold;
+    const xpEarned = isCritical ? 2 : 1;
+    
+    state.update({
+        gameCoins: state.get('gameCoins') + goldEarned,
+        xp: state.get('xp') + xpEarned,
+        energy: energy - 1,
+        totalTaps: state.get('totalTaps') + 1,
+        totalGoldEarned: state.get('totalGoldEarned') + goldEarned
+    });
+    
+    // Visual feedback
+    const rect = e.target.getBoundingClientRect();
+    const x = e.clientX || (rect.left + rect.width / 2);
+    const y = e.clientY || (rect.top + rect.height / 2);
+    
+    showClickEffect(x, y, goldEarned, isCritical);
+    createShockwave(x - rect.left, y - rect.top); // Add Shockwave relative to card
+    
+    if (particles) {
+        particles.emit(x, y, isCritical ? 20 : 8, isCritical ? '#ff006e' : '#ffd700');
+    }
+    
+    if (isCritical) {
+        document.getElementById('reactorCore').classList.add('critical');
+        setTimeout(() => document.getElementById('reactorCore').classList.remove('critical'), 300);
+        audio.play('critical');
+        haptic('heavy');
+    } else {
+        audio.play('tap');
+        haptic('light');
+    }
+    
+    updateChallengeProgress('taps', 1);
+    updateChallengeProgress('gold', goldEarned);
+    checkAchievements();
+    checkLevelUp();
+    updateUI();
+}
+
+function showClickEffect(x, y, amount, isCritical) {
+    const el = document.createElement('div');
+    el.className = 'click-effect';
+    el.textContent = `+${amount}`;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    if (isCritical) {
+        el.style.color = '#ff006e';
+        el.style.fontSize = '28px';
+    }
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
+function checkLevelUp() {
+    const xp = state.get('xp');
+    const level = state.get('level');
+    const xpNeeded = level * 1000;
+    
+    if (xp >= xpNeeded) {
+        state.update({
+            level: level + 1,
+            xp: xp - xpNeeded
+        });
+        showToast(`🎉 ${level + 1}-darajaga ko'tarildingiz!`, 'success');
+        haptic('success');
+        audio.play('levelUp');
+        checkAchievements();
+    }
 }
 
 function regenerateEnergy() {
-    // Energy Regeneration
-    if (AppState.mining.energy < CONFIG.MAX_ENERGY) {
-        AppState.mining.energy = Math.min(CONFIG.MAX_ENERGY, AppState.mining.energy + CONFIG.ENERGY_REGEN_RATE);
-    }
+    const energy = state.get('energy');
+    const maxEnergy = state.get('maxEnergy');
     
-    // Auto Tap Logic
-    if (AppState.mining.autoTapRate > 0) {
-        const autoReward = AppState.mining.autoTapRate * AppState.mining.multiplier;
-        AppState.mining.balance += autoReward;
-        AppState.mining.accumulatedCoins += autoReward; // Track for prestige
-        
-        // Update challenges
-        updateChallengeProgress('gold', autoReward);
-    }
-    
-    // Update UI if on screen (optimization)
-    const energyFill = document.getElementById('energyFill');
-    if (energyFill) {
-        const energyPercent = (AppState.mining.energy / CONFIG.MAX_ENERGY) * 100;
-        energyFill.style.width = energyPercent + '%';
-    }
-    
-    // Update balance text occasionally or rely on user interaction? 
-    // Better to update it here for auto-tap visual feedback
-    const balanceEl = document.getElementById('miningBalance');
-    if (balanceEl && AppState.mining.autoTapRate > 0) {
-        balanceEl.textContent = formatNumber(Math.floor(AppState.mining.balance));
+    if (energy < maxEnergy) {
+        state.set('energy', Math.min(energy + CONFIG.ENERGY_REGEN_RATE, maxEnergy));
+        updateEnergyBar();
     }
 }
 
-// ===========================================
-// AI CHAT SYSTEM
-// ===========================================
-
-let chatHistory = [];
-
-function initAIChat() {
-    const chatInput = document.getElementById('aiChatInput');
-    const chatSend = document.getElementById('aiChatSend');
+function autoTap() {
+    const rate = getEffectiveStat('autoTapRate');
+    if (rate <= 0) return;
     
-    if (chatInput) {
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendAIMessage();
+    // Auto tap consumes energy? Let's assume yes for consistency with previous logic, 
+    // but typically passive income shouldn't. 
+    // For now, let's keep energy consumption to avoid unbalancing existing logic 
+    // unless user requested otherwise.
+    const energy = state.get('energy');
+    if (energy <= 0) return;
+    
+    const goldEarned = rate;
+    
+    // Accumulate coins instead of direct credit
+    state.update({
+        accumulatedCoins: (state.get('accumulatedCoins') || 0) + goldEarned,
+        energy: energy - 1,
+        totalGoldEarned: state.get('totalGoldEarned') + goldEarned
+    });
+    
+    updateUI();
+}
+
+function claimAutoTapEarnings() {
+    const accumulated = state.get('accumulatedCoins') || 0;
+    if (accumulated <= 0) return;
+    
+    state.update({
+        gameCoins: state.get('gameCoins') + accumulated,
+        accumulatedCoins: 0
+    });
+    
+    showToast(`+${formatNumber(accumulated)} coin olindi!`, 'success');
+    haptic('success');
+    audio.play('achievement'); // or coin sound
+    updateUI();
+}
+
+function updateActiveEffects() {
+    const effects = state.get('activeEffects') || [];
+    if (effects.length === 0) {
+        document.getElementById('activeEffectsContainer').style.display = 'none';
+        return;
+    }
+
+    const now = Date.now();
+    const validEffects = effects.filter(e => e.endTime > now);
+
+    if (validEffects.length !== effects.length) {
+        state.update({ activeEffects: validEffects });
+        applyUpgradeEffects(); // Re-calculate stats if effects expired
+    }
+
+    renderActiveEffects(validEffects);
+}
+
+function renderActiveEffects(effects) {
+    const container = document.getElementById('activeEffectsContainer');
+    if (!effects || effects.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+    container.innerHTML = effects.map(e => {
+        const item = SHOP_ITEMS.boosters.find(i => i.id === e.id);
+        if (!item) return '';
+        
+        const timeLeft = Math.max(0, Math.ceil((e.endTime - Date.now()) / 1000));
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        return `
+            <div class="active-effect-pill">
+                <i class="fas ${item.icon}"></i>
+                <span>${item.name}</span>
+                <span class="timer">${minutes}:${seconds.toString().padStart(2, '0')}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
+// UI UPDATE FUNCTIONS
+// ============================================
+function updateUI() {
+    const s = state.state;
+    
+    // Header
+    document.getElementById('userName').textContent = s.user.name;
+    document.getElementById('userAvatar').textContent = s.user.name.charAt(0).toUpperCase();
+    document.getElementById('userTier').querySelector('span').textContent = s.user.isPremium ? 'Premium' : 'Standard';
+    
+    animateNumber('headerXP', s.xp);
+    animateNumber('headerGold', s.gold);
+    
+    // Stats bar
+    document.getElementById('statLevel').textContent = s.level;
+    document.getElementById('statStreak').textContent = s.streak;
+    document.getElementById('statReferrals').textContent = s.user.referralsCount || 0;
+    
+    if (s.darkMatter > 0) {
+        document.getElementById('darkMatterChip').style.display = 'flex';
+        document.getElementById('statDarkMatter').textContent = s.darkMatter;
+    }
+    
+    // Mining
+    animateNumber('miningBalance', s.gameCoins);
+    document.getElementById('tapPower').textContent = s.tapPower;
+    document.getElementById('autoTapRate').textContent = s.autoTapRate;
+    
+    // Claim Button
+    const claimContainer = document.getElementById('claimContainer');
+    const claimAmount = document.getElementById('claimAmount');
+    if (s.accumulatedCoins > 0) {
+        claimContainer.style.display = 'flex';
+        claimAmount.textContent = formatNumber(s.accumulatedCoins);
+    } else {
+        claimContainer.style.display = 'none';
+    }
+    
+    updateEnergyBar();
+    updatePrestigeSection();
+    
+    // Profile
+    document.getElementById('profileAvatar').textContent = s.user.name.charAt(0).toUpperCase();
+    document.getElementById('profileName').textContent = s.user.name;
+    document.getElementById('profileUsername').textContent = s.user.username ? `@${s.user.username}` : '';
+    document.getElementById('profileId').textContent = s.user.id;
+    document.getElementById('profileXP').textContent = formatNumber(s.xp);
+    document.getElementById('profileGold').textContent = formatNumber(s.gold);
+    document.getElementById('profileLevel').textContent = s.level;
+    document.getElementById('profileStreak').textContent = s.streak;
+    
+    // Premium
+    const isPremium = s.user.isPremium;
+    document.getElementById('premiumStatusText').textContent = isPremium ? 'Premium' : 'Standard';
+    document.getElementById('premiumStatusCard').classList.toggle('active', isPremium);
+    document.getElementById('exchangeXP').textContent = formatNumber(s.xp);
+    const xpBtn = document.getElementById('exchangeBtn');
+    if (xpBtn) xpBtn.disabled = s.xp < (CONFIG.XP_PREMIUM_COST || 10000);
+    const goldBtn = document.getElementById('goldExchangeBtn');
+    if (goldBtn) goldBtn.disabled = s.gold < (CONFIG.GOLD_PREMIUM_COST || 50000);
+    
+    // Quiz stats
+    renderQuizStats();
+    
+    // Admin
+    if (s.user.isAdmin) {
+        document.querySelector('.admin-nav').style.display = 'flex';
+        document.getElementById('sectionAdmin').style.display = 'block';
+    }
+}
+
+function updateEnergyBar() {
+    const energy = state.get('energy');
+    const maxEnergy = state.get('maxEnergy');
+    const percent = (energy / maxEnergy) * 100;
+    
+    const fill = document.getElementById('energyFill');
+    fill.style.width = `${percent}%`;
+    fill.classList.toggle('low', percent < 20);
+    
+    document.getElementById('energyText').textContent = `${energy}/${maxEnergy}`;
+}
+
+function updatePrestigeSection() {
+    const section = document.getElementById('prestigeSection');
+    if (canPrestige()) {
+        section.style.display = 'block';
+        document.getElementById('prestigeReward').textContent = calculatePrestigeReward();
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+// ============================================
+// RENDER FUNCTIONS
+// ============================================
+function renderUpgrades() {
+    const grid = document.getElementById('upgradesGrid');
+    const gameCoins = state.get('gameCoins');
+    const upgrades = state.get('upgrades');
+    
+    grid.innerHTML = Object.entries(UPGRADES).map(([key, u]) => {
+        const level = upgrades[key];
+        const cost = getUpgradeCost(key);
+        const canAfford = gameCoins >= cost;
+        
+        return `
+            <div class="upgrade-item ${canAfford ? '' : 'disabled'}" data-upgrade="${key}">
+                <div class="upgrade-icon"><i class="fas ${u.icon}"></i></div>
+                <div class="upgrade-info">
+                    <div class="upgrade-name">${u.name}</div>
+                    <div class="upgrade-level">Lv.${level}</div>
+                </div>
+                <div class="upgrade-cost"><i class="fas fa-coins"></i>${formatNumber(cost)}</div>
+            </div>
+        `;
+    }).join('');
+    
+    grid.querySelectorAll('.upgrade-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const type = el.dataset.upgrade;
+            if (purchaseUpgrade(type)) {
+                updateChallengeProgress('upgrade', 1);
             }
         });
-    }
-    
-    if (chatSend) {
-        chatSend.addEventListener('click', sendAIMessage);
-    }
-}
-
-async function sendAIMessage() {
-    const input = document.getElementById('aiChatInput');
-    const messagesContainer = document.getElementById('aiChatMessages');
-    
-    if (!input || !messagesContainer) return;
-    
-    const message = input.value.trim();
-    if (!message) return;
-    
-    // Clear input
-    input.value = '';
-    
-    // Add user message to UI
-    addChatMessage(message, 'user');
-    
-    // Add to history
-    chatHistory.push({ role: 'user', content: message });
-    
-    // Show typing indicator
-    const typingId = showTypingIndicator();
-    
-    try {
-        // Get AI response
-        const response = await AIService.chat(message, chatHistory, 'tutor');
-        
-        // Remove typing indicator
-        removeTypingIndicator(typingId);
-        
-        // Add AI response to UI
-        addChatMessage(response, 'ai');
-        
-        // Add to history
-        chatHistory.push({ role: 'assistant', content: response });
-        
-        // Keep history manageable
-        if (chatHistory.length > 20) {
-            chatHistory = chatHistory.slice(-20);
-        }
-        
-        SoundEngine.play('notify');
-        
-    } catch (error) {
-        removeTypingIndicator(typingId);
-        addChatMessage('Kechirasiz, xatolik yuz berdi. Qaytadan urinib ko\'ring.', 'ai');
-    }
-}
-
-function addChatMessage(text, sender) {
-    const container = document.getElementById('aiChatMessages');
-    if (!container) return;
-    
-    const messageEl = document.createElement('div');
-    messageEl.className = `chat-message ${sender}-message`;
-    messageEl.innerHTML = `
-        <div class="message-avatar">
-            ${sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>'}
-        </div>
-        <div class="message-content">
-            <div class="message-text">${escapeHtml(text)}</div>
-            <div class="message-time">${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}</div>
-        </div>
-    `;
-    
-    container.appendChild(messageEl);
-    container.scrollTop = container.scrollHeight;
-}
-
-function showTypingIndicator() {
-    const container = document.getElementById('aiChatMessages');
-    if (!container) return null;
-    
-    const id = 'typing-' + Date.now();
-    const typingEl = document.createElement('div');
-    typingEl.id = id;
-    typingEl.className = 'chat-message ai-message typing';
-    typingEl.innerHTML = `
-        <div class="message-avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content">
-            <div class="typing-dots">
-                <span></span><span></span><span></span>
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(typingEl);
-    container.scrollTop = container.scrollHeight;
-    return id;
-}
-
-function removeTypingIndicator(id) {
-    if (id) {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-    }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function openAIChatModal() {
-    const modal = document.getElementById('aiChatModal');
-    if (modal) {
-        modal.classList.add('active');
-        const input = document.getElementById('aiChatInput');
-        if (input) input.focus();
-    }
-}
-
-function closeAIChatModal() {
-    const modal = document.getElementById('aiChatModal');
-    if (modal) modal.classList.remove('active');
-}
-
-// ===========================================
-// FILE ANALYSIS MODALS
-// ===========================================
-
-function openSummaryModal(text, fileName) {
-    const modal = document.getElementById('summaryModal');
-    if (!modal) {
-        // Create modal dynamically
-        showToast('Xulosa', text.substring(0, 200) + '...', 'success');
-        return;
-    }
-    
-    document.getElementById('summaryFileName').textContent = fileName;
-    document.getElementById('summaryContent').textContent = text;
-    modal.classList.add('active');
-}
-
-function openFlashcardsModal(flashcards) {
-    const modal = document.getElementById('flashcardsModal');
-    if (!modal) {
-        showToast('Flashcards', `${flashcards.length} ta kartochka yaratildi`, 'success');
-        return;
-    }
-    
-    const container = document.getElementById('flashcardsContainer');
-    container.innerHTML = flashcards.map((card, i) => `
-        <div class="flashcard" onclick="flipFlashcard(this)">
-            <div class="flashcard-inner">
-                <div class="flashcard-front">
-                    <div class="flashcard-number">${i + 1}/${flashcards.length}</div>
-                    <div class="flashcard-text">${escapeHtml(card.front)}</div>
-                </div>
-                <div class="flashcard-back">
-                    <div class="flashcard-text">${escapeHtml(card.back)}</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    modal.classList.add('active');
-}
-
-function flipFlashcard(el) {
-    el.classList.toggle('flipped');
-    SoundEngine.play('pop');
-    HapticEngine.vibrate('light');
-}
-
-// ===========================================
-// BATTLE SYSTEM
-// ===========================================
-
-function showBattleScreen() {
-    const lobby = document.getElementById('battleLobby');
-    const active = document.getElementById('activeBattle');
-    
-    if (lobby) lobby.classList.add('hidden');
-    if (active) active.classList.remove('hidden');
-    
-    document.getElementById('battleStatusText').textContent = 'JONLI';
-}
-
-function displayBattleQuestion(question) {
-    const questionEl = document.getElementById('battleQuestion');
-    const answersEl = document.getElementById('battleAnswers');
-    
-    if (questionEl) {
-        questionEl.innerHTML = `<div class="battle-question-text">${question.question}</div>`;
-    }
-    
-    if (answersEl) {
-        answersEl.innerHTML = question.options.map((opt, i) => `
-            <div class="quiz-option" onclick="submitBattleAnswer(${i})">
-                <span class="option-letter">${String.fromCharCode(65 + i)}</span>
-                <span class="option-text">${opt}</span>
-            </div>
-        `).join('');
-    }
-}
-
-async function startBattleGame() {
-    if (!AppState.battle.isCreator) return;
-    
-    try {
-        // Generate questions
-        const questions = await generateQuizQuestions('general', 'medium', 5);
-        
-        // Update room to active with first question
-        await supabaseClient
-            .from('battle_rooms')
-            .update({
-                status: 'active',
-                questions: questions,
-                current_question: questions[0],
-                current_question_index: 0,
-                started_at: new Date().toISOString()
-            })
-            .eq('id', AppState.battle.id);
-            
-        showToast('Battle boshlandi!', 'Omad tilaymiz!', 'success');
-        
-    } catch (error) {
-        console.error('Start battle game error:', error);
-        showToast('Xatolik', 'Battle boshlab bo\'lmadi', 'error');
-    }
-}
-
-async function createBattle() {
-    if (!supabaseClient || !AppState.user) {
-        showToast('Xatolik', 'Tizimga ulanmagan', 'error');
-        return;
-    }
-    
-    const startBtn = document.querySelector('.start-quiz-btn');
-    if (startBtn) startBtn.disabled = true;
-    
-    try {
-        // 1. Create battle room
-        const { data: room, error } = await supabaseClient
-            .from('battle_rooms')
-            .insert({
-                creator_id: AppState.user.user_id,
-                status: 'waiting',
-                current_question_index: 0,
-                created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-            
-        if (error) throw error;
-        
-        // 2. Join as participant
-        await joinBattle(room.id);
-        
-        // 3. Update UI
-        AppState.battle.id = room.id;
-        AppState.battle.active = true;
-        AppState.battle.isCreator = true;
-        
-        showBattleLobby();
-        showToast('Battle yaratildi', 'Do\'stlarni taklif qiling!', 'success');
-        
-    } catch (error) {
-        console.error('Create battle error:', error);
-        showToast('Xatolik', 'Battle yaratib bo\'lmadi', 'error');
-    } finally {
-        if (startBtn) startBtn.disabled = false;
-    }
-}
-
-async function joinBattle(roomId) {
-    if (!supabaseClient || !AppState.user) return;
-    
-    try {
-        const { error } = await supabaseClient
-            .from('battle_participants')
-            .insert({
-                room_id: roomId,
-                user_id: AppState.user.user_id,
-                score: 0,
-                joined_at: new Date().toISOString()
-            });
-            
-        if (error) {
-            // Ignore unique violation (already joined)
-            if (error.code !== '23505') throw error;
-        }
-        
-        // Update local state
-        AppState.battle.id = roomId;
-        AppState.battle.active = true;
-        
-        // Subscribe to room updates
-        subscribeToBattle(roomId);
-        showBattleLobby();
-        
-    } catch (error) {
-        console.error('Join battle error:', error);
-        showToast('Xatolik', 'Battlega qo\'shilib bo\'lmadi', 'error');
-    }
-}
-
-function showBattleLobby() {
-    const lobby = document.getElementById('battleLobby');
-    const active = document.getElementById('activeBattle');
-    
-    if (lobby) lobby.classList.remove('hidden');
-    if (active) active.classList.add('hidden');
-    
-    // Update battle UI
-    document.getElementById('battleTitle').textContent = `Battle #${AppState.battle.id}`;
-    document.getElementById('battleStatusText').textContent = 'KUTILMOQDA...';
-    
-    // Show start button for creator
-    if (AppState.battle.isCreator) {
-        const startBtn = document.getElementById('startBattleBtn');
-        if (!startBtn) {
-            const btn = document.createElement('button');
-            btn.id = 'startBattleBtn';
-            btn.className = 'start-quiz-btn mt-md';
-            btn.innerHTML = '<i class="fas fa-play"></i> Boshlash';
-            btn.onclick = startBattleGame;
-            document.getElementById('battleLobby').appendChild(btn);
-        }
-    }
-    
-    refreshBattleParticipants(AppState.battle.id);
-}
-
-function subscribeToBattle(roomId) {
-    // Listen for participants
-    supabaseClient
-        .channel(`battle_participants_${roomId}`)
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'battle_participants',
-            filter: `room_id=eq.${roomId}`
-        }, (payload) => {
-            refreshBattleParticipants(roomId);
-        })
-        .subscribe();
-        
-    // Listen for room status
-    supabaseClient
-        .channel(`battle_room_${roomId}`)
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'battle_rooms',
-            filter: `id=eq.${roomId}`
-        }, (payload) => {
-            handleBattleUpdate(payload.new);
-        })
-        .subscribe();
-}
-
-async function submitBattleAnswer(answerIndex) {
-    // Disable answers
-    const opts = document.querySelectorAll('.battle-answers .quiz-option');
-    opts.forEach(o => o.style.pointerEvents = 'none');
-    
-    // Mark selected
-    opts[answerIndex].classList.add('active');
-    
-    // Check correctness
-    const currentQuestion = AppState.battle.currentQuestion;
-    const isCorrect = currentQuestion && currentQuestion.correct === answerIndex;
-    
-    if (isCorrect) {
-        opts[answerIndex].classList.add('correct');
-        // Visual feedback - confetti burst
-        createConfetti();
-        playSound('correct');
-        
-        // Update score in DB
-        await updateParticipantScore(10);
-        
-        // Show score popup
-        showScorePopup('+10', opts[answerIndex]);
-    } else {
-        opts[answerIndex].classList.add('wrong');
-        // Visual feedback - shake animation
-        opts[answerIndex].classList.add('shake-animation');
-        playSound('wrong');
-        
-        if (currentQuestion && opts[currentQuestion.correct]) {
-            opts[currentQuestion.correct].classList.add('correct');
-        }
-    }
-}
-
-function createConfetti() {
-    const colors = ['#FFD700', '#10B981', '#6366F1', '#F59E0B', '#EC4899'];
-    const container = document.body;
-    
-    for (let i = 0; i < 50; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti-piece';
-        confetti.style.cssText = `
-            position: fixed;
-            width: ${Math.random() * 10 + 5}px;
-            height: ${Math.random() * 10 + 5}px;
-            background: ${colors[Math.floor(Math.random() * colors.length)]};
-            left: ${Math.random() * 100}vw;
-            top: -20px;
-            border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
-            z-index: 9999;
-            pointer-events: none;
-            animation: confettiFall ${Math.random() * 2 + 1}s linear forwards;
-        `;
-        container.appendChild(confetti);
-        setTimeout(() => confetti.remove(), 3000);
-    }
-}
-
-function showScorePopup(text, element) {
-    const popup = document.createElement('div');
-    popup.className = 'score-popup';
-    popup.textContent = text;
-    popup.style.cssText = `
-        position: absolute;
-        font-size: 24px;
-        font-weight: bold;
-        color: var(--accent-success);
-        text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-        animation: scoreFloat 1s ease-out forwards;
-        pointer-events: none;
-        z-index: 100;
-    `;
-    element.style.position = 'relative';
-    element.appendChild(popup);
-    setTimeout(() => popup.remove(), 1000);
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function updateParticipantScore(points) {
-    try {
-        // Get current score
-        const { data: participant } = await supabaseClient
-            .from('battle_participants')
-            .select('score')
-            .eq('room_id', AppState.battle.id)
-            .eq('user_id', AppState.user.user_id)
-            .single();
-            
-        if (participant) {
-            await supabaseClient
-                .from('battle_participants')
-                .update({ score: participant.score + points })
-                .eq('room_id', AppState.battle.id)
-                .eq('user_id', AppState.user.user_id);
-        }
-    } catch (error) {
-        console.error('Update score error:', error);
-    }
-}
-
-async function handleBattleUpdate(roomData) {
-    if (roomData.status === 'active') {
-        showBattleScreen();
-        if (roomData.current_question) {
-            // Store current question for answer validation
-            AppState.battle.currentQuestion = roomData.current_question;
-            displayBattleQuestion(roomData.current_question);
-        }
-    } else if (roomData.status === 'finished') {
-        showBattleResults(roomData);
-    }
-}
-
-async function refreshBattleParticipants(roomId) {
-    const { data: participants } = await supabaseClient
-        .from('battle_participants')
-        .select('user_id, score, users(full_name)')
-        .eq('room_id', roomId)
-        .order('score', { ascending: false });
-        
-    if (participants) {
-        const list = document.getElementById('battleParticipants');
-        if (list) {
-            list.innerHTML = participants.map(p => `
-                <div class="participant">
-                    <div class="participant-avatar">${(p.users?.full_name || 'U')[0]}</div>
-                    <span>${p.users?.full_name}</span>
-                    <span style="margin-left:auto; font-weight:bold;">${p.score}</span>
-                </div>
-            `).join('');
-        }
-    }
-}
-
-async function showBattleResults(roomData) {
-    document.getElementById('activeBattle').classList.add('hidden');
-    document.getElementById('resultsModal').classList.add('active');
-    
-    // Update results modal
-    document.getElementById('resultTitle').textContent = 'Battle Yakunlandi!';
-    document.getElementById('resultSubtitle').textContent = 'Natijalar';
-    
-    // Fetch final scores
-    const { data: participants } = await supabaseClient
-        .from('battle_participants')
-        .select('user_id, score, users(full_name)')
-        .eq('room_id', roomData.id)
-        .order('score', { ascending: false });
-        
-    if (participants) {
-        const myResult = participants.find(p => p.user_id === AppState.user.user_id);
-        const myRank = participants.findIndex(p => p.user_id === AppState.user.user_id) + 1;
-        
-        document.getElementById('resultCorrect').parentElement.querySelector('.result-stat-label').textContent = 'Ball';
-        document.getElementById('resultCorrect').textContent = myResult ? myResult.score : 0;
-        
-        document.getElementById('resultWrong').parentElement.querySelector('.result-stat-label').textContent = 'O\'rin';
-        document.getElementById('resultWrong').textContent = '#' + myRank;
-        
-        // XP Reward calculation (mock)
-        const xpReward = Math.max(0, 100 - (myRank - 1) * 20);
-        document.getElementById('resultXP').textContent = '+' + xpReward;
-        
-        // Update user XP locally if needed
-        if (xpReward > 0) {
-            addXP(xpReward, 'battle_win');
-        }
-    }
-}
-
-// ===========================================
-// GLOBAL FEEDBACK & INTERACTIONS
-// ===========================================
-
-function triggerFeedback(type = 'tap') {
-    if (!AppState.settings) AppState.settings = { soundEnabled: true, hapticEnabled: true };
-    if (AppState.settings.soundEnabled) playSound(type);
-    if (AppState.settings.hapticEnabled && navigator.vibrate) {
-        const pattern = {
-            tap: 10,
-            critical: 50,
-            success: [20, 10, 20],
-            error: [50, 30, 50],
-            click: 8,
-            unlock: [10, 5, 10],
-            levelup: [15, 10, 15, 10, 15]
-        };
-        const p = pattern[type] || pattern.tap;
-        navigator.vibrate(Array.isArray(p) ? p : [p]);
-    }
-}
-
-function addGlobalClickListeners() {
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('button, .premium-cta, .plan-btn, .nav-item, .function-card, .quiz-option, .shop-btn, .achievement-badge, .category-card, .feature-card, .action-icon');
-        if (btn) {
-            gsap.fromTo(btn, { scale: 1 }, { scale: 0.96, duration: 0.1, yoyo: true, repeat: 1, ease: 'power2.inOut' });
-            triggerFeedback('click');
-        }
     });
 }
 
-// ===========================================
-// SETTINGS MODAL (SOUND/HAPTIC TOGGLE)
-// ===========================================
-
-function openSettings() {
-    const modal = document.getElementById('settingsModal');
-    if (!modal) {
-        const modalHtml = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Sozlamalar</h3>
-                    <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="setting-item">
-                        <label class="setting-label">
-                            <input type="checkbox" id="soundToggle" ${AppState.settings?.soundEnabled !== false ? 'checked' : ''}>
-                            <span>Ovozli effektlar</span>
-                        </label>
+function renderChallenges() {
+    const list = document.getElementById('challengesList');
+    const challenges = state.get('dailyChallenges');
+    
+    list.innerHTML = challenges.map(c => {
+        const percent = Math.min((c.progress / c.target) * 100, 100);
+        const completed = c.progress >= c.target;
+        
+        return `
+            <div class="challenge-item ${completed ? 'completed' : ''}">
+                <div class="challenge-icon"><i class="fas fa-bullseye"></i></div>
+                <div class="challenge-info">
+                    <div class="challenge-name">${c.name}</div>
+                    <div class="challenge-progress-bar">
+                        <div class="challenge-progress-fill" style="width:${percent}%"></div>
                     </div>
-                    <div class="setting-item">
-                        <label class="setting-label">
-                            <input type="checkbox" id="hapticToggle" ${AppState.settings?.hapticEnabled !== false ? 'checked' : ''}>
-                            <span>Vibratsiya (haptic)</span>
-                        </label>
+                </div>
+                ${completed && !c.claimed ? 
+                    `<button class="challenge-claim-btn" data-id="${c.id}">Olish</button>` :
+                    `<div class="challenge-reward"><i class="fas fa-coins"></i>${c.reward}</div>`
+                }
+            </div>
+        `;
+    }).join('');
+    
+    list.querySelectorAll('.challenge-claim-btn').forEach(btn => {
+        btn.addEventListener('click', () => claimChallengeReward(btn.dataset.id));
+    });
+}
+
+function renderAchievements() {
+    const preview = document.getElementById('achievementsPreview');
+    const unlocked = state.get('achievements');
+    
+    preview.innerHTML = ACHIEVEMENTS.slice(0, 8).map(a => {
+        const isUnlocked = unlocked.includes(a.id);
+        return `
+            <div class="achievement-item ${isUnlocked ? 'unlocked' : 'locked'}">
+                <i class="fas ${a.icon}"></i>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPodium() {
+    const podium = document.getElementById('podium');
+    const leaderboard = updateLeaderboard();
+    const top3 = leaderboard.slice(0, 3);
+    
+    const medals = ['🥇', '🥈', '🥉'];
+    const classes = ['first', 'second', 'third'];
+    
+    podium.innerHTML = top3.map((p, i) => `
+        <div class="podium-item ${classes[i]}">
+            <div class="podium-rank">${medals[i]}</div>
+            <div class="podium-avatar">${p.name.charAt(0)}</div>
+            <div class="podium-name">${p.name}${p.isUser ? ' (Siz)' : ''}</div>
+            <div class="podium-score">${formatNumber(p.score)}</div>
+        </div>
+    `).join('');
+}
+
+function renderQuizStats() {
+    const grid = document.getElementById('quizStatsGrid');
+    const stats = state.get('quizStats');
+    const accuracy = stats.total > 0 ? Math.round((stats.correct / (stats.total * 10)) * 100) : 0;
+    
+    grid.innerHTML = `
+        <div class="quiz-stat-item"><div class="value">${stats.total}</div><div class="label">Jami</div></div>
+        <div class="quiz-stat-item"><div class="value">${stats.correct}</div><div class="label">To'g'ri</div></div>
+        <div class="quiz-stat-item"><div class="value">${accuracy}%</div><div class="label">Aniqlik</div></div>
+        <div class="quiz-stat-item"><div class="value">${stats.streak}</div><div class="label">Streak</div></div>
+    `;
+}
+
+function renderDashboard() {
+    const dashboard = document.getElementById('dashboardStats');
+    const s = state.state;
+    
+    dashboard.innerHTML = `
+        <div class="dashboard-stat-item"><div class="value">${formatNumber(s.totalTaps)}</div><div class="label">Jami taplar</div></div>
+        <div class="dashboard-stat-item"><div class="value">${formatNumber(s.totalGoldEarned)}</div><div class="label">Jami gold</div></div>
+        <div class="dashboard-stat-item"><div class="value">${s.quizStats.total}</div><div class="label">Quizlar</div></div>
+        <div class="dashboard-stat-item"><div class="value">${state.get('achievements').length}</div><div class="label">Yutuqlar</div></div>
+    `;
+}
+
+function renderRecommendations() {
+    const list = document.getElementById('recommendationsList');
+    const recommendations = [
+        "Kunlik vazifalarni bajaring va bonus oling",
+        "Quiz o'ynab XP yig'ing",
+        "Upgrade sotib olib kuchingizni oshiring"
+    ];
+    
+    list.innerHTML = recommendations.map(r => `
+        <div class="recommendation-item"><i class="fas fa-lightbulb"></i><span>${r}</span></div>
+    `).join('');
+}
+
+function renderAll() {
+    renderUpgrades();
+    renderChallenges();
+    renderAchievements();
+    renderPodium();
+    renderDashboard();
+    renderRecommendations();
+    updateUI();
+}
+
+// ============================================
+// TOAST NOTIFICATIONS
+// ============================================
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ============================================
+// MODAL SYSTEM
+// ============================================
+function openModal(type) {
+    const overlay = document.getElementById('modalOverlay');
+    const title = document.getElementById('modalTitle');
+    const body = document.getElementById('modalBody');
+    
+    const modals = {
+        leaderboard: { icon: 'fa-trophy', title: 'Reyting', content: renderLeaderboardModal },
+        achievements: { icon: 'fa-medal', title: 'Yutuqlar', content: renderAchievementsModal },
+        shop: { icon: 'fa-store', title: 'Do\'kon', content: renderShopModal },
+        referral: { icon: 'fa-share-nodes', title: 'Referral', content: renderReferralModal },
+        notifications: { icon: 'fa-bell', title: 'Xabarlar', content: renderNotificationsModal },
+        help: { icon: 'fa-question-circle', title: 'Yordam', content: renderHelpModal },
+        support: { icon: 'fa-headset', title: 'Qo\'llab-quvvatlash', content: renderSupportModal },
+        aiTests: { icon: 'fa-robot', title: 'AI Testlar', content: renderAiTestsModal },
+        statistics: { icon: 'fa-chart-line', title: 'Statistika', content: renderStatisticsModal },
+        mistakes: { icon: 'fa-times-circle', title: 'Xatolar tahlili', content: renderMistakesModal },
+        srs: { icon: 'fa-repeat', title: 'SRS Vazifalar', content: renderSrsModal },
+        adaptive: { icon: 'fa-sliders-h', title: 'Adaptiv test', content: renderAdaptiveModal },
+        duel: { icon: 'fa-swords', title: 'Duel qo\'llanma', content: renderDuelModal },
+        certificates: { icon: 'fa-certificate', title: 'Sertifikatlar', content: renderCertificatesModal },
+        premium: { icon: 'fa-gem', title: 'Premium A\'zolik', content: renderPremiumModal },
+        newFeatures: { icon: 'fa-star', title: 'Yangi Imkoniyatlar', content: renderNewFeaturesModal },
+        rpg: { icon: 'fa-gamepad', title: 'RPG Tizimi', content: renderRpgModal }
+    };
+    
+    const modal = modals[type];
+    if (!modal) return;
+    
+    title.innerHTML = `<i class="fas ${modal.icon}"></i><span>${modal.title}</span>`;
+    const result = modal.content ? modal.content(body) : '';
+    
+    if (result instanceof Promise) {
+        body.innerHTML = modalLoadingHtml();
+        result.then(html => {
+            body.innerHTML = html || '<p style="text-align:center;color:var(--text-muted);">Ma\'lumot topilmadi</p>';
+        }).catch(err => {
+            console.error('Modal content error', err);
+            body.innerHTML = `<p style="color:var(--accent-red);text-align:center;">Xatolik: ${err.message || 'ma\'lumot olishda muammo'}</p>`;
+        });
+    } else if (typeof result === 'string') {
+        body.innerHTML = result;
+    } else if (result === undefined) {
+        // modal.content handled DOM directly
+    } else {
+        body.innerHTML = modalLoadingHtml();
+    }
+    
+    // Load flashcards when SRS modal opens
+    if (type === 'srs') {
+        setTimeout(() => loadMyFlashcards(), 100);
+    }
+    
+    overlay.classList.add('active');
+    haptic('light');
+}
+
+function renderPremiumModal() {
+    return `
+        <div style="padding:16px;">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="width:80px;height:80px;background:linear-gradient(135deg, #ffd700, #ffa500);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 0 20px rgba(255, 215, 0, 0.3);">
+                    <i class="fas fa-crown" style="font-size:40px;color:white;"></i>
+                </div>
+                <h3 style="background:linear-gradient(to right, #ffd700, #ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:24px;margin:0;">Premium Status</h3>
+                <p style="color:var(--text-muted);margin-top:8px;">Cheklovsiz imkoniyatlar dunyosi</p>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-glass);border-radius:12px;">
+                    <i class="fas fa-film" style="color:var(--accent-cyan);font-size:20px;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">4K & HD Kinolar</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Eng yuqori sifatda tomosha qiling</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-glass);border-radius:12px;">
+                    <i class="fas fa-headphones" style="color:var(--accent-purple);font-size:20px;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">Audio Kitoblar</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Cheklovsiz tinglash imkoniyati</div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-glass);border-radius:12px;">
+                    <i class="fas fa-bolt" style="color:var(--accent-gold);font-size:20px;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">2x XP & Coins</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Barcha harakatlar uchun ikki hissa mukofot</div>
                     </div>
                 </div>
             </div>
-        `;
-        const modalEl = document.createElement('div');
-        modalEl.id = 'settingsModal';
-        modalEl.className = 'modal';
-        modalEl.innerHTML = modalHtml;
-        document.body.appendChild(modalEl);
+
+            <div style="background:var(--bg-elevated);padding:20px;border-radius:16px;text-align:center;border:1px solid var(--accent-gold);">
+                <div style="font-size:14px;color:var(--text-muted);margin-bottom:8px;">Maxsus Taklif</div>
+                <div style="font-size:28px;font-weight:800;color:var(--accent-gold);margin-bottom:8px;">24,990 so'm <span style="font-size:14px;color:var(--text-muted);font-weight:normal;">/oy</span></div>
+                <button onclick="closeModal(); navigateTo('premium');" style="width:100%;padding:14px;background:linear-gradient(135deg, #ffd700, #ffa500);border:none;border-radius:12px;color:black;font-weight:700;font-size:16px;cursor:pointer;margin-top:12px;box-shadow:0 4px 12px rgba(255, 215, 0, 0.3);">
+                    Tariflarni Ko'rish
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderNewFeaturesModal() {
+    return `
+        <div style="padding:16px;">
+            <div style="margin-bottom:20px;">
+                <h3 style="margin:0 0 8px 0;">Yangi Imkoniyatlar 🚀</h3>
+                <p style="color:var(--text-muted);font-size:13px;margin:0;">Nexus tizimiga qo'shilgan so'nggi yangiliklar</p>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div style="background:var(--bg-glass);border-radius:16px;padding:16px;border:1px solid var(--glass-border);">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div style="width:32px;height:32px;background:rgba(0, 255, 247, 0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-brain" style="color:var(--accent-cyan);"></i>
+                        </div>
+                        <div style="font-weight:600;">SRS Flashcards</div>
+                    </div>
+                    <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px 0;">Intervalli takrorlash tizimi orqali bilimlarni mustahkamlang. O'z kartalaringizni yarating va boshqaring.</p>
+                    <button onclick="openModal('srs')" style="padding:8px 16px;background:var(--bg-elevated);border:1px solid var(--accent-cyan);border-radius:8px;color:var(--accent-cyan);font-size:12px;cursor:pointer;">Sinab ko'rish</button>
+                </div>
+
+                <div style="background:var(--bg-glass);border-radius:16px;padding:16px;border:1px solid var(--glass-border);">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div style="width:32px;height:32px;background:rgba(157, 78, 221, 0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-sliders-h" style="color:var(--accent-purple);"></i>
+                        </div>
+                        <div style="font-weight:600;">Adaptiv Testlar</div>
+                    </div>
+                    <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px 0;">Sizning bilim darajangizga moslashuvchi sun'iy intellekt asosidagi testlar.</p>
+                    <button onclick="openModal('adaptive')" style="padding:8px 16px;background:var(--bg-elevated);border:1px solid var(--accent-purple);border-radius:8px;color:var(--accent-purple);font-size:12px;cursor:pointer;">Boshlash</button>
+                </div>
+
+                <div style="background:var(--bg-glass);border-radius:16px;padding:16px;border:1px solid var(--glass-border);">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div style="width:32px;height:32px;background:rgba(255, 0, 0, 0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-swords" style="color:var(--accent-red);"></i>
+                        </div>
+                        <div style="font-weight:600;">Duel Rejimi</div>
+                    </div>
+                    <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px 0;">Do'stlar bilan bellashing! Bilimlar jangi boshlandi.</p>
+                    <button onclick="openModal('duel')" style="padding:8px 16px;background:var(--bg-elevated);border:1px solid var(--accent-red);border-radius:8px;color:var(--accent-red);font-size:12px;cursor:pointer;">Chorlash</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function modalLoadingHtml() {
+    return `
+        <div style="padding:24px;text-align:center;color:var(--text-muted);">
+            <i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;"></i>
+            <div>Ma'lumot yuklanmoqda...</div>
+        </div>
+    `;
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function renderLeaderboardModal() {
+    if (!supabaseClient) {
+        // Fallback to local simulation if no Supabase
+        const leaderboard = updateLeaderboard();
+        return renderLeaderboardHTML(leaderboard);
     }
-    modal.classList.add('active');
-    triggerFeedback('click');
+
+    return (async () => {
+        try {
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('full_name, username, xp, id')
+                .order('xp', { ascending: false })
+                .limit(20);
+
+            if (error) throw error;
+
+            const leaderboard = data.map(u => ({
+                name: u.full_name || u.username || 'User',
+                score: u.xp,
+                isUser: u.id === supabaseUserId
+            }));
+            
+            return renderLeaderboardHTML(leaderboard);
+        } catch (err) {
+            console.error('Leaderboard error', err);
+            // Fallback
+            return renderLeaderboardHTML(updateLeaderboard());
+        }
+    })();
+}
+
+function renderLeaderboardHTML(leaderboard) {
+    return leaderboard.map((p, i) => `
+        <div class="leaderboard-row ${p.isUser ? 'user' : ''}" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-glass);border-radius:12px;margin-bottom:8px;">
+            <div style="width:24px;text-align:center;font-weight:700;color:${i < 3 ? 'var(--accent-gold)' : 'var(--text-muted)'}">${i + 1}</div>
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;text-transform:uppercase;">${p.name.charAt(0)}</div>
+            <div style="flex:1;font-weight:500;">${p.name}${p.isUser ? ' (Siz)' : ''}</div>
+            <div style="color:var(--accent-gold);font-weight:600;">${formatNumber(p.score)} XP</div>
+        </div>
+    `).join('');
+}
+
+function renderAchievementsModal() {
+    const unlocked = state.get('achievements');
+    return ACHIEVEMENTS.map(a => {
+        const isUnlocked = unlocked.includes(a.id);
+        return `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-glass);border-radius:12px;margin-bottom:8px;opacity:${isUnlocked ? 1 : 0.5};">
+                <div style="width:40px;height:40px;background:${isUnlocked ? 'rgba(255,215,0,0.2)' : 'var(--bg-elevated)'};border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas ${a.icon}" style="color:${isUnlocked ? 'var(--accent-gold)' : 'var(--text-muted)'}"></i>
+                </div>
+                <div style="flex:1;">
+                    <div style="font-weight:600;">${a.name}</div>
+                    <div style="font-size:11px;color:var(--text-muted);">${isUnlocked ? 'Ochilgan ✓' : 'Qulflangan'}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderShopModal() {
+    // Ensure shop state exists
+    const ownedSkins = state.get('ownedSkins') || ['skin_default'];
+    const currentSkin = state.get('currentSkin') || 'skin_default';
+    
+    // Helper to render tabs
+    const renderContent = (type) => {
+        if (type === 'boosters') {
+            return SHOP_ITEMS.boosters.map(item => `
+                <div class="upgrade-item" onclick="buyShopItem('${item.id}', 'booster')">
+                    <div class="upgrade-icon"><i class="fas ${item.icon}"></i></div>
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">${item.name}</div>
+                        <div class="upgrade-level">${item.desc}</div>
+                    </div>
+                    <div class="upgrade-cost">
+                        <i class="fas fa-coins"></i> ${formatNumber(item.cost)}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            return SHOP_ITEMS.skins.map(item => {
+                const owned = ownedSkins.includes(item.id);
+                const equipped = currentSkin === item.id;
+                let btnText = owned ? (equipped ? 'Faol' : 'O\'rnatish') : formatNumber(item.cost);
+                let btnIcon = owned ? (equipped ? 'fa-check' : 'fa-exchange-alt') : 'fa-coins';
+                let btnClass = owned ? (equipped ? 'active-skin' : 'owned-skin') : '';
+                
+                return `
+                <div class="upgrade-item ${btnClass}" onclick="buyShopItem('${item.id}', 'skin')">
+                    <div class="upgrade-icon"><i class="fas ${item.icon}"></i></div>
+                    <div class="upgrade-info">
+                        <div class="upgrade-name">${item.name}</div>
+                        <div class="upgrade-level">${item.desc}</div>
+                    </div>
+                    <div class="upgrade-cost" style="${owned ? 'color:var(--text-muted);' : ''}">
+                        <i class="fas ${btnIcon}"></i> ${btnText}
+                    </div>
+                </div>
+            `}).join('');
+        }
+    };
+
+    // Tab switching logic embedded in HTML via simple onclick re-render or just render all for simplicity
+    // Let's use simple sections
+    return `
+        <div style="padding:10px;">
+            <div style="text-align:center;margin-bottom:16px;">
+                <i class="fas fa-store" style="font-size:32px;color:var(--accent-cyan);"></i>
+                <h3 style="margin:4px 0;">Do'kon</h3>
+                <p style="color:var(--text-muted);font-size:12px;">Coinlaringizni ishlating</p>
+            </div>
+            
+            <h4 style="margin:10px 0;color:var(--accent-gold);">⚡ Kuchaytirgichlar</h4>
+            <div class="upgrades-grid" style="margin-bottom:20px;">
+                ${renderContent('boosters')}
+            </div>
+            
+            <h4 style="margin:10px 0;color:var(--accent-purple);">🎨 Skinlar</h4>
+            <div class="upgrades-grid">
+                ${renderContent('skins')}
+            </div>
+        </div>
+    `;
+}
+
+function renderReferralModal() {
+    const link = getReferralLink(state.get('user').referralCode);
+    const referrals = state.get('user').referralsCount || 0;
+    return `
+        <div style="text-align:center;padding:20px;display:flex;flex-direction:column;gap:16px;">
+            <div>
+                <i class="fas fa-share-nodes" style="font-size:48px;color:var(--accent-cyan);margin-bottom:16px;"></i>
+                <h3>Do'stlaringizni taklif qiling</h3>
+                <p style="color:var(--text-muted);margin:12px 0;">Har bir do'st uchun ${CONFIG.REFERRAL_REWARD_XP} XP va taklif qiluvchiga bonus gold!</p>
+            </div>
+            <div style="background:var(--bg-elevated);padding:12px;border-radius:12px;word-break:break-all;font-size:12px;">${link}</div>
+            <button onclick="navigator.clipboard.writeText('${link}');showToast('Nusxa olindi','success');" style="padding:12px 24px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));border:none;border-radius:12px;color:white;font-weight:600;cursor:pointer;">
+                <i class="fas fa-copy"></i> Nusxalash
+            </button>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);">
+                <span>Taklif qilingan do'stlar:</span>
+                <span style="font-weight:600;color:var(--accent-cyan);">${referrals}</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderNotificationsModal() {
+    if (!supabaseClient) {
+        return `
+            <div style="text-align:center;padding:20px;">
+                <i class="fas fa-exclamation-circle" style="font-size:48px;color:var(--accent-red);margin-bottom:16px;"></i>
+                <p style="color:var(--text-muted);">Supabase ulanmagan</p>
+            </div>
+        `;
+    }
+
+    return (async () => {
+        try {
+            const { data, error } = await supabaseClient
+                .from('broadcast_messages')
+                .select('message_text, created_at')
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (error) throw error;
+
+            if (!data || !data.length) {
+                return `
+                    <div style="text-align:center;padding:20px;">
+                        <i class="fas fa-bell-slash" style="font-size:48px;color:var(--text-muted);margin-bottom:16px;"></i>
+                        <p style="color:var(--text-muted);">Yangi xabarlar yo'q</p>
+                    </div>
+                `;
+            }
+
+            return `
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    ${data.map(msg => `
+                        <div style="padding:12px;background:var(--bg-glass);border-radius:12px;border:1px solid var(--glass-border);">
+                            <div style="font-size:13px;color:var(--text-primary);margin-bottom:6px;">${msg.message_text}</div>
+                            <div style="font-size:10px;color:var(--text-muted);text-align:right;">
+                                ${new Date(msg.created_at).toLocaleString()}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (err) {
+            console.error('Notifications error', err);
+            return `<div style="padding:20px;text-align:center;color:var(--accent-red);">Xatolik yuz berdi</div>`;
+        }
+    })();
+}
+
+function renderAiTestsModal(container) {
+    if (!container) {
+        return `<div style="padding:20px;">AI testlar oynasi</div>`;
+    }
+    if (!supabaseClient || !supabaseUserId) {
+        container.innerHTML = `
+            <div style="padding:20px;text-align:center;">
+                <p style="color:var(--accent-red);">Supabase ulanmagan. CONFIG dagi URL/KEY ni to'ldiring.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = aiTestsModalTemplate();
+    const listEl = container.querySelector('#aiTestsList');
+    const formEl = container.querySelector('#aiTestForm');
+    const statusEl = container.querySelector('#aiTestStatus');
+
+    loadAiTestsList(listEl);
+    formEl.addEventListener('submit', (e) => {
+        e.preventDefault();
+        createAiTestFromForm(formEl, listEl, statusEl);
+    });
+}
+
+function aiTestsModalTemplate() {
+    return `
+        <div class="ai-tests-modal" style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                <h3 style="margin:0;">Mening AI testlarim</h3>
+                <p style="color:var(--text-muted);margin:0;font-size:13px;">Yaratilgan testlar ro'yxati va yangi test qo'shish.</p>
+            </div>
+            <div id="aiTestsList" style="max-height:220px;overflow:auto;border:1px solid var(--glass-border);border-radius:12px;padding:12px;background:var(--bg-glass);">
+                ${modalLoadingHtml()}
+            </div>
+            <form id="aiTestForm" style="display:flex;flex-direction:column;gap:10px;border:1px solid var(--glass-border);border-radius:12px;padding:12px;background:var(--bg-glass);">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label>Test nomi</label>
+                    <input name="title" type="text" required placeholder="Masalan: Matematika asoslari" style="padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-primary);">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label>Tavsif</label>
+                    <textarea name="description" rows="2" placeholder="Qisqa tavsif" style="padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-primary);"></textarea>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:140px;">
+                        <label>Kategoriya</label>
+                        <select name="category" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-primary);">
+                            <option value="general">Umumiy</option>
+                            <option value="science">Fan</option>
+                            <option value="tech">Texnologiya</option>
+                            <option value="history">Tarix</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;min-width:140px;">
+                        <label>Qiyinlik</label>
+                        <select name="difficulty" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-primary);">
+                            <option value="easy">Oson</option>
+                            <option value="medium" selected>O'rta</option>
+                            <option value="hard">Qiyin</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;min-width:140px;">
+                        <label>Savollar soni</label>
+                        <input name="question_count" type="number" value="10" min="5" max="50" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text-primary);">
+                    </div>
+                </div>
+                <button type="submit" style="padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));color:#fff;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-plus-circle"></i> Yangi test qo'shish
+                </button>
+                <div id="aiTestStatus" style="font-size:12px;color:var(--text-muted);"></div>
+            </form>
+        </div>
+    `;
+}
+
+async function loadAiTestsList(target) {
+    if (!target) return;
+    if (!supabaseClient) {
+        target.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text-muted);">Supabase ulanmagan (Offline Mode).</div>`;
+        return;
+    }
+    target.innerHTML = modalLoadingHtml();
+    try {
+        const { data, error } = await supabaseClient
+            .from('quizzes')
+            .select('id,title,description,category,difficulty,question_count,created_at')
+            .eq('creator_id', supabaseUserId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+        if (error) throw error;
+        if (!data || !data.length) {
+            target.innerHTML = `<div style="padding:12px;text-align:center;color:var(--text-muted);">Hozircha AI testlar yaratilmagan.</div>`;
+            return;
+        }
+        target.innerHTML = data.map(q => `
+            <div style="padding:12px;margin-bottom:8px;background:var(--bg-elevated);border-radius:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-weight:600;">${q.title}</div>
+                    <div style="font-size:11px;color:var(--text-muted);">${new Date(q.created_at).toLocaleString()}</div>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${q.category} • ${q.difficulty} • ${q.question_count} savol</div>
+                ${q.description ? `<div style="font-size:12px;margin-top:6px;">${q.description}</div>` : ''}
+                <button class="play-ai-quiz-btn" data-config='${JSON.stringify({category: q.category, difficulty: q.difficulty, questionCount: q.question_count})}' style="margin-top:10px;width:100%;padding:8px;background:var(--accent-cyan);border:none;border-radius:8px;color:#000;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-play"></i> Boshlash
+                </button>
+            </div>
+        `).join('');
+        
+        target.querySelectorAll('.play-ai-quiz-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const config = JSON.parse(btn.dataset.config);
+                startQuiz(config);
+            });
+        });
+    } catch (err) {
+        console.error('loadAiTestsList error', err);
+        target.innerHTML = `<div style="padding:12px;color:var(--accent-red);text-align:center;">Xatolik: ${err.message}</div>`;
+    }
+}
+
+async function createAiTestFromForm(form, listEl, statusEl) {
+    if (!supabaseClient) return;
+    const formData = new FormData(form);
+    const payload = {
+        creator_id: supabaseUserId,
+        title: formData.get('title')?.toString().trim(),
+        description: formData.get('description')?.toString().trim() || null,
+        category: formData.get('category') || 'general',
+        difficulty: formData.get('difficulty') || 'medium',
+        question_count: Number(formData.get('question_count')) || 10,
+        is_public: false,
+        is_active: true
+    };
+
+    if (!payload.title) {
+        statusEl.textContent = 'Test nomi talab qilinadi';
+        statusEl.style.color = 'var(--accent-red)';
+        return;
+    }
+
+    statusEl.textContent = 'Saqlanmoqda...';
+    statusEl.style.color = 'var(--text-muted)';
+    try {
+        const { error } = await supabaseClient.from('quizzes').insert(payload);
+        if (error) throw error;
+        statusEl.textContent = 'Saqlangan ✅';
+        statusEl.style.color = 'var(--accent-green)';
+        form.reset();
+        loadAiTestsList(listEl);
+    } catch (err) {
+        console.error('createAiTestFromForm error', err);
+        statusEl.textContent = `Xatolik: ${err.message}`;
+        statusEl.style.color = 'var(--accent-red)';
+    }
+}
+
+function renderStatisticsModal() {
+    if (!supabaseClient || !supabaseUserId) {
+        return `<div style="padding:20px;text-align:center;color:var(--text-muted);">Supabase ulanmagan.</div>`;
+    }
+    return (async () => {
+        const [{ data: results, error: resultsError }, { data: quizzes, error: quizzesError }] = await Promise.all([
+            supabaseClient
+                .from('quiz_results')
+                .select('score,total,accuracy,created_at')
+                .eq('user_id', supabaseUserId)
+                .order('created_at', { ascending: false })
+                .limit(100),
+            supabaseClient
+                .from('quizzes')
+                .select('id')
+                .eq('creator_id', supabaseUserId)
+        ]);
+
+        if (resultsError) {
+            console.error('Stats error', resultsError);
+            return `<div style="padding:20px;text-align:center;color:var(--accent-red);">Xatolik yuz berdi.</div>`;
+        }
+
+        const totalAttempts = results?.length || 0;
+        const avgAccuracy = totalAttempts
+            ? (results.reduce((sum, r) => sum + (r.accuracy || 0), 0) / totalAttempts).toFixed(1)
+            : '0.0';
+        const bestScore = results?.reduce((max, r) => Math.max(max, r.score || 0), 0) || 0;
+        const totalQuizzes = quizzes?.length || 0;
+        const s = state.state;
+
+        // Prepare chart data (last 10 attempts, reversed to show chronological order)
+        const chartData = (results || []).slice(0, 10).reverse();
+        const maxBarHeight = 100;
+        
+        const chartHTML = chartData.length ? `
+            <div style="margin-top:20px;padding:15px;background:var(--bg-glass);border-radius:12px;border:1px solid var(--glass-border);">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">So'nggi 10 ta o'yin dinamikasi (Aniqlik %)</div>
+                <div style="display:flex;align-items:flex-end;gap:8px;height:${maxBarHeight}px;padding-bottom:5px;border-bottom:1px solid var(--glass-border);">
+                    ${chartData.map(r => {
+                        const height = Math.max(5, (r.accuracy / 100) * maxBarHeight);
+                        const color = r.accuracy >= 80 ? 'var(--accent-green)' : r.accuracy >= 50 ? 'var(--accent-gold)' : 'var(--accent-red)';
+                        return `
+                            <div style="flex:1;background:${color};height:${height}px;border-radius:4px 4px 0 0;position:relative;transition:height 0.5s ease;">
+                                <div style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);">${r.accuracy}%</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        return `
+            <div style="padding:10px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+                    <div class="dashboard-stat-item">
+                        <div class="value">${formatNumber(s.totalTaps)}</div>
+                        <div class="label">Jami taplar</div>
+                    </div>
+                    <div class="dashboard-stat-item">
+                        <div class="value">${formatNumber(s.totalGoldEarned)}</div>
+                        <div class="label">Jami coin</div>
+                    </div>
+                    <div class="dashboard-stat-item">
+                        <div class="value">${totalQuizzes}</div>
+                        <div class="label">Yaratilgan testlar</div>
+                    </div>
+                    <div class="dashboard-stat-item">
+                        <div class="value">${totalAttempts}</div>
+                        <div class="label">Quiz urinishlari</div>
+                    </div>
+                    <div class="dashboard-stat-item">
+                        <div class="value">${avgAccuracy}%</div>
+                        <div class="label">O'rtacha aniqlik</div>
+                    </div>
+                    <div class="dashboard-stat-item">
+                        <div class="value">${bestScore}</div>
+                        <div class="label">Eng yuqori bal</div>
+                    </div>
+                </div>
+                ${chartHTML}
+            </div>
+        `;
+    })();
+}
+
+function renderMistakesModal() {
+    if (!supabaseClient || !supabaseUserId) {
+        return `<div style="padding:20px;text-align:center;color:var(--text-muted);">Supabase ulanmagan.</div>`;
+    }
+    return (async () => {
+        const { data, error } = await supabaseClient
+            .from('quiz_results')
+            .select('quiz_id,score,total,accuracy,created_at')
+            .eq('user_id', supabaseUserId)
+            .lt('accuracy', 100) // Only show quizzes with mistakes
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (error) throw error;
+        if (!data || !data.length) {
+            return `
+                <div style="padding:20px;text-align:center;">
+                    <i class="fas fa-check-double" style="font-size:48px;color:var(--accent-green);margin-bottom:16px;"></i>
+                    <p style="color:var(--text-muted);">Ajoyib! So'nggi o'yinlarda xatolar yo'q.</p>
+                </div>
+            `;
+        }
+        return data.map(res => {
+            const acc = res.accuracy ?? (res.total ? Math.round((res.score / res.total) * 100) : 0);
+            return `
+                <div style="padding:12px;margin-bottom:8px;background:var(--bg-glass);border-radius:12px;border-left: 3px solid var(--accent-red);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-weight:600;">Quiz #${res.quiz_id || 'Autogen'}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">${new Date(res.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:14px;font-weight:700;color:var(--accent-red);">${res.total - res.score} xato</div>
+                            <div style="font-size:10px;color:var(--text-muted);">${acc}% aniqlik</div>
+                        </div>
+                    </div>
+                    <button onclick="startSrsReview()" style="width:100%;margin-top:10px;padding:8px;background:rgba(239, 68, 68, 0.15);border:1px solid var(--accent-red);border-radius:8px;color:var(--accent-red);font-size:11px;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-dumbbell"></i> Qayta ishlash (SRS)
+                    </button>
+                </div>
+            `;
+        }).join('');
+    })();
+}
+
+let currentFlashcards = [];
+let flashcardIndex = 0;
+
+async function startSrsReview() {
+    // Show loading state
+    const overlay = document.getElementById('modalOverlay');
+    const body = overlay.querySelector('.modal-body');
+    if (body) body.innerHTML = modalLoadingHtml();
+
+    currentFlashcards = [];
+    
+    // Try to load from Supabase first
+    if (supabaseClient && supabaseUserId) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('flashcards')
+                .select('*')
+                .eq('user_id', supabaseUserId)
+                .limit(20);
+                
+            if (data && data.length > 0) {
+                // Map to quiz format
+                currentFlashcards = data.map(card => ({
+                    q: card.question,
+                    a: [card.answer], // Only one answer for flashcards
+                    c: 0,
+                    id: card.id,
+                    isCustom: true
+                }));
+            }
+        } catch (err) {
+            console.error('SRS load error', err);
+        }
+    }
+
+    // If no custom cards, use general questions as fallback
+    if (currentFlashcards.length === 0) {
+        currentFlashcards = [...QUIZ_QUESTIONS.general, ...QUIZ_QUESTIONS.science, ...QUIZ_QUESTIONS.tech]
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 10);
+    } else {
+        // Shuffle custom cards
+        currentFlashcards.sort(() => 0.5 - Math.random());
+    }
+
+    flashcardIndex = 0;
+    renderFlashcard();
+}
+
+function renderFlashcard() {
+    const card = currentFlashcards[flashcardIndex];
+    if (!card) {
+        // End of session
+        const body = document.getElementById('modalBody');
+        body.innerHTML = `
+            <div style="text-align:center;padding:20px;">
+                <div style="margin-bottom:20px;">
+                    <i class="fas fa-check-circle" style="font-size:64px;color:var(--accent-green);"></i>
+                </div>
+                <h3>Ajoyib!</h3>
+                <p style="color:var(--text-muted);margin:10px 0;">Bugungi takrorlash rejasini bajardingiz.</p>
+                <div style="font-size:24px;color:var(--accent-gold);margin:15px 0;">+500 XP</div>
+                <button id="closeSrsBtn" style="padding:12px 24px;background:var(--accent-cyan);border:none;border-radius:12px;font-weight:600;cursor:pointer;">Yopish</button>
+            </div>
+        `;
+        
+        const closeBtn = document.getElementById('closeSrsBtn');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                closeModal();
+                state.update({xp: state.get('xp') + 500});
+                updateUI();
+            };
+        }
+        return;
+    }
+
+    const body = document.getElementById('modalBody');
+    body.innerHTML = `
+        <div style="padding:20px;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Flashcard ${flashcardIndex + 1}/${currentFlashcards.length}</div>
+            
+            <div class="flashcard-container" id="flashcardItem">
+                <div class="flashcard-inner">
+                    <div class="flashcard-front">${card.q}</div>
+                    <div class="flashcard-back">${card.a[card.c]}</div>
+                </div>
+            </div>
+            
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:20px;">Javobni ko'rish uchun kartaga bosing</p>
+            
+            <div style="display:flex;gap:10px;">
+                <button class="flashcard-btn hard" style="flex:1;padding:12px;background:var(--bg-glass);border:1px solid var(--accent-red);color:var(--accent-red);border-radius:12px;font-weight:600;">Qiyin</button>
+                <button class="flashcard-btn easy" style="flex:1;padding:12px;background:var(--bg-glass);border:1px solid var(--accent-green);color:var(--accent-green);border-radius:12px;font-weight:600;">Oson</button>
+            </div>
+        </div>
+    `;
+    
+    // Attach listeners
+    const cardEl = document.getElementById('flashcardItem');
+    if (cardEl) {
+        cardEl.onclick = () => {
+            cardEl.classList.toggle('flipped');
+            handleButtonClick('Flip Flashcard', cardEl);
+        };
+    }
+
+    const hardBtn = body.querySelector('.flashcard-btn.hard');
+    if (hardBtn) {
+        hardBtn.onclick = (e) => {
+            handleButtonClick('Flashcard Hard', e.target);
+            flashcardIndex++;
+            renderFlashcard();
+        };
+    }
+
+    const easyBtn = body.querySelector('.flashcard-btn.easy');
+    if (easyBtn) {
+        easyBtn.onclick = (e) => {
+            handleButtonClick('Flashcard Easy', e.target);
+            flashcardIndex++;
+            renderFlashcard();
+        };
+    }
+}
+
+
+function renderSrsModal(container) {
+    container.innerHTML = `
+        <div style="padding:20px;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <i class="fas fa-brain" style="font-size:48px;color:var(--accent-cyan);margin-bottom:16px;"></i>
+                <h3>SRS Flashcards</h3>
+                <p style="color:var(--text-muted);margin-top:8px;margin-bottom:20px;">
+                    Intervalli takrorlash tizimi orqali bilimlaringizni mustahkamlang.
+                </p>
+                <button id="startSrsBtn" style="padding:12px 24px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));border:none;border-radius:12px;color:white;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-play"></i> Takrorlashni boshlash
+                </button>
+            </div>
+            
+            <div style="border-top:1px solid var(--glass-border);padding-top:20px;margin-top:20px;">
+                <h4 style="margin-bottom:12px;"><i class="fas fa-plus-circle"></i> Yangi Flashcard qo'shish</h4>
+                <form id="addFlashcardForm" style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Savol (old tomon)</label>
+                        <textarea id="flashcardQuestion" rows="2" required placeholder="Masalan: Python nima?" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:var(--bg-glass);color:var(--text-primary);resize:none;"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Javob (orqa tomon)</label>
+                        <textarea id="flashcardAnswer" rows="2" required placeholder="Masalan: Dasturlash tili" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:var(--bg-glass);color:var(--text-primary);resize:none;"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Kategoriya</label>
+                        <select id="flashcardCategory" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--glass-border);background:var(--bg-glass);color:var(--text-primary);">
+                            <option value="general">Umumiy</option>
+                            <option value="science">Fan</option>
+                            <option value="tech">Texnologiya</option>
+                            <option value="history">Tarix</option>
+                            <option value="language">Til</option>
+                        </select>
+                    </div>
+                    <button type="button" id="saveFlashcardBtn" style="padding:12px;background:var(--accent-green);border:none;border-radius:12px;color:#000;font-weight:600;cursor:pointer;">
+                        <i class="fas fa-save"></i> Saqlash
+                    </button>
+                    <div id="flashcardStatus" style="font-size:12px;text-align:center;"></div>
+                </form>
+            </div>
+            
+            <div id="myFlashcardsList" style="border-top:1px solid var(--glass-border);padding-top:20px;margin-top:20px;">
+                <h4 style="margin-bottom:12px;"><i class="fas fa-layer-group"></i> Mening kartalarim</h4>
+                <div id="flashcardsContainer" style="max-height:200px;overflow-y:auto;">
+                    <div style="text-align:center;color:var(--text-muted);padding:12px;">Yuklanmoqda...</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Attach Event Listeners
+    document.getElementById('startSrsBtn').addEventListener('click', startSrsReview);
+    document.getElementById('saveFlashcardBtn').addEventListener('click', saveFlashcard);
+}
+
+async function saveFlashcard() {
+    const question = document.getElementById('flashcardQuestion')?.value?.trim();
+    const answer = document.getElementById('flashcardAnswer')?.value?.trim();
+    const category = document.getElementById('flashcardCategory')?.value || 'general';
+    const statusEl = document.getElementById('flashcardStatus');
+    
+    if (!question || !answer) {
+        if (statusEl) {
+            statusEl.textContent = 'Savol va javobni to\'ldiring!';
+            statusEl.style.color = 'var(--accent-red)';
+        }
+        return;
+    }
+    
+    if (!supabaseClient || !supabaseUserId) {
+        if (statusEl) {
+            statusEl.textContent = 'Supabase ulanmagan!';
+            statusEl.style.color = 'var(--accent-red)';
+        }
+        return;
+    }
+    
+    if (statusEl) {
+        statusEl.textContent = 'Saqlanmoqda...';
+        statusEl.style.color = 'var(--text-muted)';
+    }
+    
+    try {
+        const { error } = await supabaseClient.from('flashcards').insert({
+            user_id: supabaseUserId,
+            question: question,
+            answer: answer,
+            category: category,
+            difficulty: 1,
+            next_review: new Date().toISOString(),
+            repetitions: 0
+        });
+        
+        if (error) throw error;
+        
+        if (statusEl) {
+            statusEl.textContent = 'Saqlandi! ✅';
+            statusEl.style.color = 'var(--accent-green)';
+        }
+        
+        // Clear form
+        document.getElementById('flashcardQuestion').value = '';
+        document.getElementById('flashcardAnswer').value = '';
+        
+        // Reload flashcards list
+        loadMyFlashcards();
+        
+        // Haptic feedback
+        handleButtonClick('Save Flashcard', document.getElementById('addFlashcardForm'));
+        
+        showToast('Flashcard saqlandi!', 'success');
+    } catch (err) {
+        console.error('saveFlashcard error', err);
+        if (statusEl) {
+            statusEl.textContent = `Xatolik: ${err.message}`;
+            statusEl.style.color = 'var(--accent-red)';
+        }
+    }
+}
+
+async function loadMyFlashcards() {
+    const container = document.getElementById('flashcardsContainer');
+    if (!container) return;
+    
+    if (!supabaseClient || !supabaseUserId) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:12px;">Supabase ulanmagan.</div>';
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('flashcards')
+            .select('id,question,answer,category,difficulty,repetitions,created_at')
+            .eq('user_id', supabaseUserId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+        
+        if (error) throw error;
+        
+        if (!data || !data.length) {
+            container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:12px;">Hozircha kartalar yo\'q. Yangi karta qo\'shing!</div>';
+            return;
+        }
+        
+        container.innerHTML = data.map(card => `
+            <div style="padding:12px;margin-bottom:8px;background:var(--bg-glass);border-radius:12px;border-left:3px solid var(--accent-cyan);">
+                <div style="font-weight:600;font-size:13px;margin-bottom:4px;">${card.question}</div>
+                <div style="font-size:12px;color:var(--text-muted);">${card.answer}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                    <span style="font-size:10px;color:var(--text-muted);">${card.category} • ${card.repetitions || 0} takror</span>
+                    <button onclick="deleteFlashcard(${card.id})" style="padding:4px 8px;background:rgba(239,68,68,0.15);border:1px solid var(--accent-red);border-radius:6px;color:var(--accent-red);font-size:10px;cursor:pointer;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('loadMyFlashcards error', err);
+        container.innerHTML = `<div style="text-align:center;color:var(--accent-red);padding:12px;">Xatolik: ${err.message}</div>`;
+    }
+}
+
+async function deleteFlashcard(id) {
+    if (!supabaseClient || !supabaseUserId) return;
+    
+    if (!confirm('Bu kartani o\'chirmoqchimisiz?')) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('flashcards')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', supabaseUserId);
+        
+        if (error) throw error;
+        
+        loadMyFlashcards();
+        showToast('Karta o\'chirildi', 'success');
+    } catch (err) {
+        console.error('deleteFlashcard error', err);
+        showToast('O\'chirishda xatolik', 'error');
+    }
+}
+
+function renderAdaptiveModal() {
+    return `
+        <div style="padding:20px;text-align:center;">
+            <i class="fas fa-sliders-h" style="font-size:48px;color:var(--accent-purple);margin-bottom:16px;"></i>
+            <h3>Adaptiv Test</h3>
+            <p style="color:var(--text-muted);margin-top:8px;margin-bottom:20px;">
+                Sizning bilim darajangizga moslashuvchi maxsus test rejimi. 
+                Savollar osonlikdan qiyinlikka qarab o'zgarib boradi.
+            </p>
+            <button onclick="startQuiz({difficulty: 'adaptive', category: 'general', questionCount: 15})" style="padding:12px 24px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));border:none;border-radius:12px;color:white;font-weight:600;cursor:pointer;">
+                <i class="fas fa-play"></i> Testni boshlash
+            </button>
+        </div>
+    `;
+}
+
+function renderDuelModal() {
+    return `
+        <div style="padding:20px;text-align:center;">
+            <i class="fas fa-swords" style="font-size:48px;color:var(--accent-red);margin-bottom:16px;"></i>
+            <h3>Duel Rejimi</h3>
+            <p style="color:var(--text-muted);margin-top:8px;margin-bottom:20px;">
+                Do'stlaringiz bilan real vaqtda bellashing! 
+                G'olib barcha yutuqni oladi.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button onclick="if(window.Telegram?.WebApp){window.Telegram.WebApp.switchInlineQuery('duel', ['users', 'groups'])}else{window.open('https://t.me/${CONFIG.BOT_USERNAME}', '_blank')}" style="padding:14px;background:linear-gradient(135deg,var(--accent-red),var(--accent-purple));border:none;border-radius:12px;color:white;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="fas fa-fist-raised"></i> Do'stni chorlash
+                </button>
+                <a href="https://t.me/${CONFIG.BOT_USERNAME}" target="_blank" style="padding:14px;background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:12px;color:var(--text-primary);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="fas fa-robot"></i> Bot orqali o'ynash
+                </a>
+            </div>
+        </div>
+    `;
+}
+
+function renderCertificatesModal() {
+    if (!supabaseClient || !supabaseUserId) {
+        return `<div style="padding:20px;text-align:center;color:var(--text-muted);">Supabase ulanmagan.</div>`;
+    }
+    return (async () => {
+        const { data, error } = await supabaseClient
+            .from('quiz_results')
+            .select('*')
+            .eq('user_id', supabaseUserId)
+            .gte('accuracy', 90)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Certificates error', error);
+            return `<div style="padding:20px;text-align:center;color:var(--accent-red);">Xatolik yuz berdi.</div>`;
+        }
+
+        if (!data || !data.length) {
+            return `
+                <div style="padding:20px;text-align:center;">
+                    <i class="fas fa-certificate" style="font-size:48px;color:var(--text-muted);margin-bottom:16px;"></i>
+                    <p style="color:var(--text-muted);">Sizda hali sertifikatlar yo'q.</p>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">Sertifikat olish uchun quizlarda 90% dan yuqori natija ko'rsating!</p>
+                </div>
+            `;
+        }
+
+        return data.map(cert => `
+            <div style="background:linear-gradient(135deg, rgba(255,215,0,0.1), rgba(0,0,0,0.5));border:1px solid var(--accent-gold);padding:16px;border-radius:12px;margin-bottom:12px;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-10px;right:-10px;font-size:60px;opacity:0.1;color:var(--accent-gold);transform:rotate(15deg);">
+                    <i class="fas fa-certificate"></i>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div style="font-weight:700;color:var(--accent-gold);font-size:18px;">SERTIFIKAT</div>
+                    <div style="font-size:12px;color:var(--text-muted);">${new Date(cert.created_at).toLocaleDateString()}</div>
+                </div>
+                <div style="font-size:14px;margin-bottom:4px;">Muvaffaqiyatli yakunlandi</div>
+                <div style="font-size:12px;color:var(--text-muted);">Natija: ${cert.score}/${cert.total} (${cert.accuracy}%)</div>
+                <div style="margin-top:12px;text-align:right;">
+                    <span style="font-family:'Courier New', monospace;font-size:10px;color:var(--text-muted);">ID: ${cert.id.split('-')[0]}</span>
+                </div>
+            </div>
+        `).join('');
+    })();
+}
+
+function renderHelpModal() {
+    return `
+        <div style="padding:10px;">
+            <div style="margin-bottom:16px;">
+                <h4 style="margin-bottom:8px;"><i class="fas fa-gamepad" style="color:var(--accent-cyan);margin-right:8px;"></i>O'yin</h4>
+                <p style="font-size:13px;color:var(--text-secondary);">Reaktorga bosib gold yig'ing. Kritik urilishlar 2x gold beradi!</p>
+            </div>
+            <div style="margin-bottom:16px;">
+                <h4 style="margin-bottom:8px;"><i class="fas fa-arrow-up" style="color:var(--accent-cyan);margin-right:8px;"></i>Upgrade</h4>
+                <p style="font-size:13px;color:var(--text-secondary);">Gold sarflab kuchingizni oshiring.</p>
+            </div>
+            <div style="margin-bottom:16px;">
+                <h4 style="margin-bottom:8px;"><i class="fas fa-brain" style="color:var(--accent-cyan);margin-right:8px;"></i>Quiz</h4>
+                <p style="font-size:13px;color:var(--text-secondary);">Savollarni javoblab XP yig'ing.</p>
+            </div>
+            <div>
+                <h4 style="margin-bottom:8px;"><i class="fas fa-atom" style="color:var(--accent-purple);margin-right:8px;"></i>Prestige</h4>
+                <p style="font-size:13px;color:var(--text-secondary);">100K gold yig'ib Dark Matter oling va qaytadan boshlang!</p>
+            </div>
+        </div>
+    `;
+}
+
+function renderSupportModal() {
+    return `
+        <div style="text-align:center;padding:20px;">
+            <i class="fas fa-headset" style="font-size:48px;color:var(--accent-cyan);margin-bottom:16px;"></i>
+            <h3>Qo'llab-quvvatlash</h3>
+            <p style="color:var(--text-muted);margin:12px 0;">Savollaringiz bo'lsa, bog'laning:</p>
+            <button onclick="if(window.Telegram?.WebApp){window.Telegram.WebApp.openTelegramLink('https://t.me/${CONFIG.SUPPORT_USERNAME}')}else{window.open('https://t.me/${CONFIG.SUPPORT_USERNAME}', '_blank')}" style="display:inline-block;margin-top:12px;padding:12px 24px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));border:none;border-radius:12px;color:white;font-weight:600;cursor:pointer;">
+                <i class="fas fa-paper-plane"></i> Yozish
+            </button>
+        </div>
+    `;
+}
+
+// ============================================
+// NAVIGATION
+// ============================================
+function navigateTo(section) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    const sectionMap = {
+        gamification: 'sectionGamification',
+        newFunctions: 'sectionNewFunctions',
+        profile: 'sectionProfile',
+        premium: 'sectionPremium',
+        aiQuiz: 'sectionAiQuiz',
+        admin: 'sectionAdmin'
+    };
+    
+    const sectionId = sectionMap[section];
+    if (sectionId) {
+        document.getElementById(sectionId).classList.add('active');
+        document.querySelector(`[data-section="${section}"]`)?.classList.add('active');
+    }
+    
+    haptic('light');
+    window.scrollTo(0, 0);
+    
+    // Auto save on navigation
+    state.saveState();
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+function openSettings() {
+    document.getElementById('settingsOverlay').classList.add('active');
+    
+    const settings = state.get('settings');
+    document.getElementById('soundToggle').checked = settings.sound;
+    document.getElementById('hapticToggle').checked = settings.haptic;
+    document.getElementById('themeSelect').value = settings.theme;
+    
+    haptic('light');
+}
+
+function closeSettings() {
+    document.getElementById('settingsOverlay').classList.remove('active');
 }
 
 function saveSettings() {
-    const sound = document.getElementById('soundToggle')?.checked ?? true;
-    const haptic = document.getElementById('hapticToggle')?.checked ?? true;
-    AppState.settings = { soundEnabled: sound, hapticEnabled: haptic };
-    localStorage.setItem('nexus_settings', JSON.stringify(AppState.settings));
-    closeModal('settingsModal');
-    showToast('Saqlandi', 'Sozlamalar saqlandi', 'success');
-    triggerFeedback('success');
+    const settings = {
+        sound: document.getElementById('soundToggle').checked,
+        haptic: document.getElementById('hapticToggle').checked,
+        theme: document.getElementById('themeSelect').value
+    };
+    state.set('settings', settings);
+    showToast('Sozlamalar saqlandi', 'success');
 }
 
-// Load settings on init
-function loadSettings() {
-    try {
-        const stored = localStorage.getItem('nexus_settings');
-        if (stored) {
-            AppState.settings = JSON.parse(stored);
+// ============================================
+// SPOTLIGHT EFFECT
+// ============================================
+function initSpotlight() {
+    const spotlight = document.getElementById('spotlight');
+    
+    document.addEventListener('mousemove', (e) => {
+        spotlight.style.left = `${e.clientX}px`;
+        spotlight.style.top = `${e.clientY}px`;
+        spotlight.classList.add('active');
+    });
+    
+    document.addEventListener('mouseleave', () => {
+        spotlight.classList.remove('active');
+    });
+}
+
+// ============================================
+// STREAK SYSTEM
+// ============================================
+function checkStreak() {
+    const lastActive = state.get('lastActive');
+    const today = new Date().toDateString();
+    
+    if (lastActive !== today) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        if (lastActive === yesterday.toDateString()) {
+            state.update({
+                streak: state.get('streak') + 1,
+                lastActive: today
+            });
+            showToast(`🔥 ${state.get('streak')} kunlik streak!`, 'success');
+        } else if (lastActive) {
+            state.update({
+                streak: 1,
+                lastActive: today
+            });
         } else {
-            AppState.settings = { soundEnabled: true, hapticEnabled: true };
+            state.update({
+                streak: 1,
+                lastActive: today
+            });
         }
-    } catch {
-        AppState.settings = { soundEnabled: true, hapticEnabled: true };
+        
+        checkAchievements();
     }
 }
 
-// ===========================================
-// VISUAL EFFECTS (from old JS)
-// ===========================================
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+async function searchUser() {
+    const query = document.getElementById('adminSearchInput').value.trim();
+    const results = document.getElementById('adminSearchResults');
+    
+    if (!query) {
+        results.innerHTML = '<p style="color:var(--text-muted);text-align:center;">ID yoki username kiriting</p>';
+        return;
+    }
+    if (!supabaseClient) {
+        results.innerHTML = '<p style="color:var(--accent-red);text-align:center;">Supabase ulanmagan</p>';
+        return;
+    }
 
+    results.innerHTML = modalLoadingHtml();
+    const isNumeric = /^\d+$/.test(query);
+    let request = supabaseClient
+        .from('users')
+        .select('id, username, full_name, xp, gold, level, subscription_type, premium_expires')
+        .limit(20);
+
+    if (isNumeric) {
+        request = request.eq('id', Number(query));
+    } else {
+        request = request.ilike('username', `%${query}%`);
+    }
+
+    const { data, error } = await request;
+    if (error) {
+        console.error('Admin search error', error);
+        results.innerHTML = `<p style="color:var(--accent-red);text-align:center;">Xatolik: ${error.message}</p>`;
+        return;
+    }
+
+    if (!data || !data.length) {
+        results.innerHTML = `<p style="color:var(--text-muted);text-align:center;">Mos foydalanuvchi topilmadi.</p>`;
+        return;
+    }
+
+    const tierLabel = (t) => {
+        if (t >= 2) return 'Exclusive';
+        if (t >= 1) return 'Premium';
+        return 'Free';
+    };
+
+    results.innerHTML = data.map(user => `
+        <div style="padding:12px;margin-bottom:8px;background:var(--bg-glass);border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <div>
+                <div style="font-weight:600;">${user.full_name || 'Noma\'lum'}</div>
+                <div style="font-size:12px;color:var(--text-muted);">@${user.username || 'none'} • ID: ${user.id}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">XP: ${formatNumber(user.xp || 0)} • Gold: ${formatNumber(user.gold || 0)}</div>
+            </div>
+            <div style="text-align:right;font-size:12px;">
+                <div style="font-weight:600;">${tierLabel(user.subscription_type)}</div>
+                <div>${user.premium_expires ? new Date(user.premium_expires).toLocaleDateString() : '—'}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function sendBroadcast() {
+    const text = document.getElementById('broadcastText').value.trim();
+    if (!text) {
+        showToast('Xabar matnini kiriting', 'error');
+        return;
+    }
+    if (!supabaseClient || !supabaseUserId) {
+        showToast('Supabase ulanmagan', 'error');
+        return;
+    }
+    try {
+        const payload = {
+            sent_by: supabaseUserId,
+            message_text: text
+        };
+        const { error } = await supabaseClient.from('broadcast_messages').insert(payload);
+        if (error) {
+            throw error;
+        }
+        showToast('Broadcast xabari saqlandi', 'success');
+        document.getElementById('broadcastText').value = '';
+    } catch (err) {
+        console.error('sendBroadcast error', err);
+        showToast('Broadcastni saqlashda xatolik', 'error');
+    }
+}
+
+function exportData() {
+    const data = JSON.stringify(state.state, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nexus_data.json';
+    a.click();
+    
+    URL.revokeObjectURL(url);
+    showToast('Ma\'lumotlar yuklandi', 'success');
+}
+
+function clearCache() {
+    if (confirm('Keshni tozalashni xohlaysizmi?')) {
+        localStorage.clear();
+        showToast('Kesh tozalandi', 'success');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+function initEventListeners() {
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => navigateTo(item.dataset.section));
+    });
+    
+    // Reactor tap
+    document.getElementById('reactorCore').addEventListener('click', handleTap);
+    document.getElementById('reactorCore').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleTap(e.touches[0]);
+    });
+    
+    // Settings
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('settingsClose').addEventListener('click', closeSettings);
+    document.getElementById('settingsOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('settingsOverlay')) closeSettings();
+    });
+    
+    document.getElementById('soundToggle').addEventListener('change', saveSettings);
+    document.getElementById('hapticToggle').addEventListener('change', saveSettings);
+    document.getElementById('themeSelect').addEventListener('change', saveSettings);
+    
+    // Modal
+    document.querySelectorAll('[data-modal]').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.modal));
+    });
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('modalOverlay')) closeModal();
+    });
+    
+    // Prestige
+    document.getElementById('prestigeBtn').addEventListener('click', doPrestige);
+    
+    // Quiz
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.category-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+        });
+    });
+    
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+    
+    document.querySelectorAll('.count-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+    
+    document.getElementById('startQuizBtn').addEventListener('click', startQuiz);
+    document.getElementById('quizCloseBtn').addEventListener('click', closeQuiz);
+    document.getElementById('resultsRetryBtn').addEventListener('click', () => {
+        document.getElementById('quizResults').style.display = 'none';
+        startQuiz();
+    });
+    document.getElementById('resultsBackBtn').addEventListener('click', closeQuiz);
+    
+    // Premium
+    document.querySelectorAll('.plan-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const plan = btn.dataset.plan;
+            const days = parseInt(btn.dataset.days, 10);
+            const amount = parseInt(btn.dataset.amount, 10);
+            buyPremiumPlan(plan, days, amount);
+        });
+    });
+    
+    document.getElementById('exchangeBtn').addEventListener('click', () => {
+        exchangeXpForPremium();
+    });
+    document.getElementById('goldExchangeBtn').addEventListener('click', () => {
+        exchangeGoldForPremium();
+    });
+    
+    // Admin
+    document.getElementById('adminSearchBtn')?.addEventListener('click', searchUser);
+    document.getElementById('broadcastBtn')?.addEventListener('click', sendBroadcast);
+    document.getElementById('exportDataBtn')?.addEventListener('click', exportData);
+    document.getElementById('clearCacheBtn')?.addEventListener('click', clearCache);
+    
+    // New Functions
+    const functionActions = {
+        'ai-test': () => openModal('aiTests'),
+        'my-tests': () => openModal('aiTests'),
+        'statistics': () => openModal('statistics'),
+        'mistakes': () => openModal('mistakes'),
+        'srs': () => openModal('srs'),
+        'adaptive': () => openModal('adaptive'),
+        'duel': () => openModal('duel'),
+        'certificates': () => openModal('certificates'),
+        'quick-quiz': () => startQuiz({ category: 'mixed', difficulty: 'easy', questionCount: 15 }),
+        'rpg': () => openModal('rpg')
+    };
+
+    document.querySelectorAll('.function-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const func = card.dataset.func;
+            if (functionActions[func]) {
+                functionActions[func]();
+            } else {
+                showToast('Funksiya tez kunda!', 'info');
+            }
+            haptic('light');
+        });
+    });
+}
+
+// ============================================
 // MYSTERY DROP SYSTEM (GACHA)
+// ============================================
 class MysteryDropSystem {
     constructor() {
         this.container = document.getElementById('mysteryDropContainer');
@@ -3011,6 +3459,7 @@ class MysteryDropSystem {
     }
 
     scheduleNext() {
+        // Random time between 60s and 120s
         const delay = (60 + Math.random() * 60) * 1000;
         this.timer = setTimeout(() => this.spawn(), delay);
     }
@@ -3023,6 +3472,7 @@ class MysteryDropSystem {
         drop.className = 'mystery-drop';
         drop.innerHTML = '<i class="fas fa-cube"></i>';
         
+        // Random position
         const x = Math.random() * (window.innerWidth - 60);
         const y = Math.random() * (window.innerHeight - 60);
         drop.style.left = `${x}px`;
@@ -3032,6 +3482,7 @@ class MysteryDropSystem {
         
         this.container.appendChild(drop);
 
+        // Disappear after 15 seconds if not clicked
         setTimeout(() => {
             if (drop.parentNode) {
                 drop.remove();
@@ -3045,35 +3496,47 @@ class MysteryDropSystem {
         drop.remove();
         this.active = false;
         
+        // Rewards logic
         const roll = Math.random();
         let rewardType, amount, message;
 
         if (roll < 0.6) {
+            // Common: Gold
             amount = Math.floor(1000 + Math.random() * 2000);
-            if (AppState.user) AppState.user.gold = (AppState.user.gold || 0) + amount;
+            state.update({ gameCoins: state.get('gameCoins') + amount });
             rewardType = 'coin';
-            message = `+${amount} Gold`;
+            message = `+${amount} Coin`;
         } else if (roll < 0.9) {
+            // Rare: XP
             amount = Math.floor(500 + Math.random() * 500);
-            if (AppState.user) AppState.user.xp = (AppState.user.xp || 0) + amount;
+            state.update({ xp: state.get('xp') + amount });
             rewardType = 'xp';
             message = `+${amount} XP`;
         } else {
-            if (AppState.mining) AppState.mining.energy = CONFIG.MAX_ENERGY;
+            // Legendary: Energy Refill
+            state.update({ energy: state.get('maxEnergy') });
             rewardType = 'energy';
             message = 'To\'liq Energiya!';
         }
 
         showToast(`📦 Cosmic Crate: ${message}`, 'success');
-        triggerFeedback('success');
-        playSound('achievement');
+        haptic('heavy');
+        audio.play('achievement');
         
+        // Particles
+        const rect = drop.getBoundingClientRect();
+        if (particles) {
+            particles.emit(rect.left + 30, rect.top + 30, 30, '#00fff7');
+        }
+
         updateUI();
         this.scheduleNext();
     }
 }
 
+// ============================================
 // CURSOR TRAIL EFFECT
+// ============================================
 class CursorTrail {
     constructor() {
         this.canvas = document.createElement('canvas');
@@ -3137,75 +3600,16 @@ class CursorTrail {
     }
 }
 
-// MAGNETIC BUTTONS
-class MagneticButtons {
-    constructor() {
-        this.buttons = document.querySelectorAll('button, .nav-item, .function-card, .upgrade-item, .premium-utility-card');
-        this.init();
-    }
-
-    init() {
-        if ('ontouchstart' in window) return;
-
-        this.buttons.forEach(btn => {
-            btn.addEventListener('mousemove', (e) => {
-                const rect = btn.getBoundingClientRect();
-                const x = e.clientX - rect.left - rect.width / 2;
-                const y = e.clientY - rect.top - rect.height / 2;
-                
-                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
-            });
-
-            btn.addEventListener('mouseleave', () => {
-                btn.style.transform = 'translate(0, 0)';
-                btn.style.transition = 'transform 0.3s ease-out';
-                setTimeout(() => {
-                    btn.style.transition = '';
-                }, 300);
-            });
-        });
-    }
-}
-
-// PARALLAX EFFECT
-class ParallaxEffect {
-    constructor() {
-        this.cards = document.querySelectorAll('.mining-card, .profile-header, .premium-status-card, .glass-card');
-        this.init();
-    }
-
-    init() {
-        if ('ontouchstart' in window) return;
-
-        document.addEventListener('mousemove', (e) => {
-            const x = (window.innerWidth / 2 - e.clientX) / 50;
-            const y = (window.innerHeight / 2 - e.clientY) / 50;
-
-            this.cards.forEach(card => {
-                card.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg)`;
-                card.style.transition = 'transform 0.1s ease-out';
-            });
-        });
-        
-        document.addEventListener('mouseleave', () => {
-            this.cards.forEach(card => {
-                card.style.transform = 'perspective(1000px) rotateY(0) rotateX(0)';
-                card.style.transition = 'transform 0.5s ease-out';
-            });
-        });
-    }
-}
-
+// ============================================
 // RPG SYSTEM (Basic Shell)
+// ============================================
 function renderRpgModal() {
-    if (!AppState.user) return '';
-    
-    const level = AppState.user.level || 1;
+    // Placeholder stats for now
     const stats = {
-        str: 10 + Math.floor(level * 1.5),
-        agi: 8 + Math.floor(level * 1.2),
-        int: 12 + Math.floor(level * 1.8),
-        hp: 100 + level * 20
+        str: 10 + Math.floor(state.get('level') * 1.5),
+        agi: 8 + Math.floor(state.get('level') * 1.2),
+        int: 12 + Math.floor(state.get('level') * 1.8),
+        hp: 100 + state.get('level') * 20
     };
 
     return `
@@ -3214,8 +3618,8 @@ function renderRpgModal() {
                 <div style="width:80px;height:80px;margin:0 auto 10px;background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;color:white;">
                     <i class="fas fa-user-astronaut"></i>
                 </div>
-                <h3 style="margin:0;">${AppState.user.name || 'Foydalanuvchi'}</h3>
-                <p style="color:var(--text-muted);font-size:12px;">Level ${level} Space Ranger</p>
+                <h3 style="margin:0;">${state.get('user').name}</h3>
+                <p style="color:var(--text-muted);font-size:12px;">Level ${state.get('level')} Space Ranger</p>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
@@ -3253,2136 +3657,169 @@ function renderRpgModal() {
     `;
 }
 
-// PARTICLE SYSTEM (simplified version)
-class ParticleSystem {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.particles = [];
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
+// ============================================
+// VISUAL EFFECTS (Magnetic & Parallax)
+// ============================================
+class MagneticButtons {
+    constructor() {
+        this.buttons = document.querySelectorAll('button, .nav-item, .function-card, .upgrade-item');
+        this.init();
     }
 
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    }
+    init() {
+        if ('ontouchstart' in window) return; // Disable on touch devices
 
-    emit(x, y, count = 10, color = '#00fff7') {
-        for (let i = 0; i < count; i++) {
-            this.particles.push({
-                x,
-                y,
-                vx: (Math.random() - 0.5) * 4,
-                vy: (Math.random() - 0.5) * 4,
-                life: 1,
-                color
+        this.buttons.forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                
+                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
             });
-        }
-    }
 
-    update() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const p = this.particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= 0.02;
-            
-            if (p.life <= 0) {
-                this.particles.splice(i, 1);
-                continue;
-            }
-            
-            this.ctx.globalAlpha = p.life;
-            this.ctx.fillStyle = p.color;
-            this.ctx.fillRect(p.x, p.y, 2, 2);
-        }
-        
-        requestAnimationFrame(() => this.update());
-    }
-}
-
-// MESH GRADIENT (simplified version)
-class MeshGradient {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.time = 0;
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-    }
-
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    }
-
-    animate() {
-        this.time += 0.005;
-        
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-        gradient.addColorStop(0, `hsla(${180 + Math.sin(this.time) * 30}, 100%, 50%, 0.1)`);
-        gradient.addColorStop(0.5, `hsla(${280 + Math.cos(this.time) * 30}, 100%, 50%, 0.1)`);
-        gradient.addColorStop(1, `hsla(${200 + Math.sin(this.time + 1) * 30}, 100%, 50%, 0.1)`);
-        
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        requestAnimationFrame(() => this.animate());
-    }
-}
-
-// SPOTLIGHT EFFECT
-function initSpotlight() {
-    const spotlight = document.getElementById('spotlight');
-    if (!spotlight) return;
-    
-    document.addEventListener('mousemove', (e) => {
-        spotlight.style.left = e.clientX + 'px';
-        spotlight.style.top = e.clientY + 'px';
-        spotlight.classList.add('active');
-    });
-    
-    document.addEventListener('mouseleave', () => {
-        spotlight.classList.remove('active');
-    });
-}
-
-// ===========================================
-// INITIALIZATION ENHANCED
-// ===========================================
-
-function formatNumber(num) {
-    return new Intl.NumberFormat('uz-UZ').format(num);
-}
-
-function buyPremium(planType) {
-    triggerFeedback('unlock');
-    showPayment(planType);
-}
-
-function showPayment(planType) {
-    const modal = document.getElementById('paymentModal');
-    const amountEl = document.getElementById('paymentAmount');
-    const planEl = document.getElementById('paymentPlan');
-    
-    if (!modal) return;
-    
-    const price = CONFIG.PREMIUM_PRICES[planType] || 25000;
-    
-    const planNames = {
-        'premium_week': 'Premium - 1 hafta',
-        'premium_month': 'Premium - 1 oy',
-        'exclusive_week': 'Exclusive - 1 hafta',
-        'exclusive_month': 'Exclusive - 1 oy',
-        'exclusive_pro_plus_1': 'Exclusive Pro+ (1 kun)'
-    };
-    
-    const planName = planNames[planType] || 'Premium Obuna';
-    
-    if (amountEl) amountEl.textContent = formatNumber(price) + " so'm";
-    if (planEl) planEl.textContent = planName;
-    
-    // Store current plan in modal dataset
-    modal.dataset.plan = planType;
-    
-    modal.classList.add('active');
-}
-
-function copyCardNumber() {
-    const cardNumber = CONFIG.PAYMENT_CARD;
-    navigator.clipboard.writeText(cardNumber.replace(/\s/g, '')).then(() => {
-        showToast('Nusxalandi', 'Karta raqami nusxalandi', 'success');
-    }).catch(() => {
-        showToast('Xatolik', 'Nusxalab bo\'lmadi', 'error');
-    });
-}
-
-async function uploadReceipt(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        showToast('Xatolik', 'Fayl hajmi 5MB dan oshmasligi kerak', 'error');
-        return;
-    }
-    
-    const submitBtn = document.querySelector('.upload-receipt');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yuklanmoqda...';
-    submitBtn.disabled = true;
-    
-    try {
-        if (!supabaseClient) throw new Error('Tizim xatoligi: Supabase ulanmagan');
-        
-        const user = AppState.user;
-        if (!user) throw new Error('Foydalanuvchi aniqlanmadi');
-        
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.user_id}_${Date.now()}.${fileExt}`;
-        const filePath = `receipts/${fileName}`;
-        
-        // 1. Upload image to Supabase Storage
-        const { error: uploadError } = await supabaseClient.storage
-            .from('receipts')
-            .upload(filePath, file);
-            
-        if (uploadError) throw uploadError;
-        
-        // 2. Get public URL
-        const { data: urlData } = supabaseClient.storage
-            .from('receipts')
-            .getPublicUrl(filePath);
-            
-        // 3. Save request to DB
-        const modal = document.getElementById('paymentModal');
-        const plan = modal.dataset.plan || 'premium';
-        const price = CONFIG.PREMIUM_PRICES[plan] || 25000;
-        
-        const { error: dbError } = await supabaseClient
-            .from('payments')
-            .insert({
-                user_id: user.user_id,
-                plan: plan,
-                amount: price,
-                receipt_url: urlData.publicUrl,
-                status: 'pending',
-                created_at: new Date().toISOString()
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'translate(0, 0)';
+                // Add transition temporarily for smooth reset
+                btn.style.transition = 'transform 0.3s ease-out';
+                setTimeout(() => {
+                    btn.style.transition = '';
+                }, 300);
             });
-            
-        if (dbError) throw dbError;
-        
-        showToast('Muvaffaqiyatli', 'Chek yuborildi! Admin tasdiqlashini kuting.', 'success');
-        closeModal('paymentModal');
-        
-    } catch (error) {
-        console.error('Upload error:', error);
-        showToast('Xatolik', 'Chekni yuklab bo\'lmadi. Qayta urining.', 'error');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-        event.target.value = ''; // Reset input
+        });
     }
 }
 
-// ===========================================
-// NAVIGATION
-// ===========================================
-
-// Navigation handled by AnimationController version
-
-
-// ===========================================
-// REMOVED: MEDIA SECTIONS (Cinema, Library, Stream)
-// ===========================================
-// These sections have been removed as requested.
-// Media content functionality is now handled by Bot Tests and Wayground sections.
-
-// ===========================================
-// PROMO & SUPPORT HANDLERS
-// ===========================================
-
-function openPromoModal() {
-    document.getElementById('promoModal').classList.add('active');
-}
-
-function openSupportModal() {
-    document.getElementById('supportModal').classList.add('active');
-}
-
-function submitPromoCode() {
-    const code = document.getElementById('promoCodeInput').value.trim();
-    if (!code) {
-        showToast('Xatolik', 'Kodni kiriting', 'error');
-        return;
-    }
-    
-    // Mock validation
-    if (code.toUpperCase() === 'NEXUS2024') {
-        showToast('Muvaffaqiyatli', 'Promo kod qabul qilindi! +500 XP', 'success');
-        addXP(500, 'promo');
-        closeModal('promoModal');
-    } else {
-        showToast('Xatolik', 'Noto\'g\'ri kod', 'error');
-    }
-}
-
-async function submitSupportTicket() {
-    const topic = document.getElementById('supportTopic').value;
-    const message = document.getElementById('supportMessage').value.trim();
-    
-    if (!message) {
-        showToast('Xatolik', 'Xabarni yozing', 'error');
-        return;
-    }
-    
-    // In a real app, send to Supabase
-    showToast('Yuborildi', 'Xabaringiz qabul qilindi. Tez orada javob beramiz.', 'success');
-    closeModal('supportModal');
-    document.getElementById('supportMessage').value = '';
-}
-
-// ===========================================
-// LEADERBOARD & GAMIFICATION
-// ===========================================
-
-async function renderLeaderboard() {
-    const list = document.getElementById('leaderboardList');
-    if (!list) return; // If element doesn't exist (e.g. using modal version)
-    
-    list.innerHTML = '<div class="text-center text-muted">Yuklanmoqda...</div>';
-    
-    try {
-        let leaderboardData = [];
-        
-        if (supabaseClient) {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .select('user_id, full_name, xp, level')
-                .order('xp', { ascending: false })
-                .limit(20);
-            
-            if (!error && data) {
-                leaderboardData = data;
-            }
-        }
-        
-        // Fallback mock data
-        if (leaderboardData.length === 0) {
-            leaderboardData = [
-                { full_name: 'Asadbek', xp: 18500, level: 16 },
-                { full_name: 'Sardor', xp: 15200, level: 15 },
-                { full_name: 'Malika', xp: 14100, level: 14 },
-                { full_name: 'User 4', xp: 12000, level: 12 },
-                { full_name: 'User 5', xp: 10500, level: 11 },
-            ];
-        }
-        
-        // Update Podiums (Top 3)
-        updatePodium(leaderboardData.slice(0, 3));
-        
-        // Render List (Rest)
-        list.innerHTML = leaderboardData.slice(3).map((user, i) => {
-            const rank = i + 4;
-            return `
-                <div class="leaderboard-item glass-card" style="margin-bottom: 8px; padding: 12px; border-radius: 12px;">
-                    <div class="leaderboard-rank" style="background: rgba(255,255,255,0.1); color: var(--text-secondary);">${rank}</div>
-                    <div class="leaderboard-user">
-                        <div class="leaderboard-name">${user.full_name || 'User'}</div>
-                        <div class="leaderboard-score">Level ${user.level || 1}</div>
-                    </div>
-                    <div class="leaderboard-points" style="color: var(--accent-info);">${formatNumber(user.xp || 0)} XP</div>
-                </div>
-            `;
-        }).join('');
-        
-    } catch (error) {
-        console.error('Leaderboard error:', error);
-        list.innerHTML = '<div class="text-center text-muted">Xatolik yuz berdi</div>';
-    }
-}
-
-function updatePodium(topUsers) {
-    // Helper to set podium data safely
-    const setPodiumData = (index, user, selector) => {
-        const placeEl = document.querySelector(selector);
-        if (!placeEl) return;
-        
-        if (user) {
-            const nameEl = placeEl.querySelector('.podium-name');
-            const scoreEl = placeEl.querySelector('.podium-score');
-            if (nameEl) nameEl.textContent = user.full_name || 'User';
-            if (scoreEl) scoreEl.textContent = formatNumber(user.xp || 0) + ' XP';
-            // Optional: Set avatar if available
-            // placeEl.querySelector('.podium-avatar').style.backgroundImage = ...
-        } else {
-            placeEl.style.opacity = '0.5';
-        }
-    };
-
-    // Match the actual HTML structure: .podium-item.first, .podium-item.second, .podium-item.third
-    setPodiumData(0, topUsers[0], '.podium-item.first');
-    setPodiumData(1, topUsers[1], '.podium-item.second');
-    setPodiumData(2, topUsers[2], '.podium-item.third');
-}
-
-// Keep the old function for backward compatibility or remove if not needed
-function showLeaderboard() {
-    navigateTo('gamification');
-}
-
-function showAchievements() {
-    showToast('Yutuqlar', 'Tez orada...', 'info');
-}
-
-function showGoldShop() {
-    navigateTo('premium');
-}
-
-function showDailyChallenge() {
-    showToast('Kunlik', 'Tez orada...', 'info');
-}
-
-// ===========================================
-// EXPORT FUNCTIONALITY
-// ===========================================
-
-function exportStats() {
-    const user = AppState.user;
-    if (!user) return;
-    
-    // Create CSV content
-    const csvContent = [
-        ['Statistika', 'Qiymat'],
-        ['Ism', user.full_name],
-        ['XP', user.xp],
-        ['Gold', user.gold],
-        ['Level', user.level],
-        ['Streak', user.streak_count],
-        ['Status', user.premium_type],
-        ['Sana', new Date().toLocaleString('uz-UZ')]
-    ].map(row => row.join(',')).join('\n');
-    
-    downloadFile(csvContent, 'nexus_stats.csv', 'text/csv');
-    showToast('Yuklandi', 'Statistika yuklandi', 'success');
-}
-
-function exportResults() {
-    // Export quiz results
-    const results = AppState.quiz.answers || [];
-    
-    const csvContent = [
-        ['Savol', 'Javob', 'To\'g\'ri', 'Natija'],
-        ...results.map((r, i) => [
-            `Savol ${i + 1}`,
-            r.answer || '-',
-            r.correct || '-',
-            r.isCorrect ? 'To\'g\'ri' : 'Noto\'g\'ri'
-        ])
-    ].map(row => row.join(',')).join('\n');
-    
-    downloadFile(csvContent, 'quiz_results.csv', 'text/csv');
-    closeModal('resultsModal');
-    showToast('Yuklandi', 'Natijalar yuklandi', 'success');
-}
-
-function downloadFile(content, filename, type) {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-// ===========================================
-// MODALS
-// ===========================================
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-function openSettings() {
-    document.getElementById('settingsModal').classList.add('active');
-    
-    // Initialize switch states
-    const soundToggle = document.getElementById('settingSound');
-    if (soundToggle) soundToggle.checked = AppState.settings.sound;
-    
-    const hapticToggle = document.getElementById('settingHaptic');
-    if (hapticToggle) hapticToggle.checked = AppState.settings.haptic;
-    
-    const themeSelect = document.getElementById('settingTheme');
-    if (themeSelect) themeSelect.value = AppState.settings.theme;
-}
-
-// Close modals on overlay click
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) {
-        e.target.classList.remove('active');
-    }
-});
-
-// ===========================================
-// TOAST NOTIFICATIONS
-// ===========================================
-
-function showToast(title, message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div class="toast-icon">
-            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}"></i>
-        </div>
-        <div class="toast-content">
-            <div class="toast-title">${title}</div>
-            <div class="toast-message">${message}</div>
-        </div>
-    `;
-    
-    container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-20px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// ===========================================
-// URL PARAMETER HANDLING
-// ===========================================
-
-function handleUrlParams() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const section = urlParams.get('section');
-    const userId = urlParams.get('user_id');
-    
-    // If user_id is provided in URL and not yet set (e.g. external browser testing)
-    if (userId && !AppState.user) {
-        console.log('User ID from URL:', userId);
-        // We might want to use this for testing or fallback
-        // But loadUserData handles data loading. 
-        // If we want to force a user ID for testing:
-        if (!AppState.telegramUser) {
-             AppState.telegramUser = { id: parseInt(userId), first_name: 'Test User' };
-        }
-    }
-    
-    if (section) {
-        console.log('Navigating to section from URL:', section);
-        // Add a small delay to ensure UI is ready and transitions are smooth
-        setTimeout(() => {
-            navigateTo(section);
-        }, 500);
-    }
-}
-
-// ===========================================
-// VISUAL EFFECTS SYSTEM
-// ===========================================
-
-class ParticleSystem {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.particles = [];
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
+class ParallaxEffect {
+    constructor() {
+        this.cards = document.querySelectorAll('.mining-card, .profile-header, .premium-status-card');
+        this.init();
     }
 
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    }
+    init() {
+        if ('ontouchstart' in window) return;
 
-    emit(x, y, count = 10, color = '#ffd700') {
-        for (let i = 0; i < count; i++) {
-            this.particles.push({
-                x, y,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.5) * 8 - 3,
-                life: 1,
-                decay: 0.02 + Math.random() * 0.02,
-                size: 3 + Math.random() * 4,
-                color
+        document.addEventListener('mousemove', (e) => {
+            const x = (window.innerWidth / 2 - e.clientX) / 50;
+            const y = (window.innerHeight / 2 - e.clientY) / 50;
+
+            this.cards.forEach(card => {
+                card.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg)`;
+                card.style.transition = 'transform 0.1s ease-out';
             });
-        }
-    }
-
-    update() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.particles = this.particles.filter(p => {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.2;
-            p.life -= p.decay;
-            
-            if (p.life <= 0) return false;
-            
-            this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-            this.ctx.fillStyle = p.color;
-            this.ctx.globalAlpha = p.life;
-            this.ctx.fill();
-            this.ctx.globalAlpha = 1;
-            
-            return true;
         });
         
-        requestAnimationFrame(() => this.update());
+        // Reset on leave
+        document.addEventListener('mouseleave', () => {
+            this.cards.forEach(card => {
+                card.style.transform = 'perspective(1000px) rotateY(0) rotateX(0)';
+                card.style.transition = 'transform 0.5s ease-out';
+            });
+        });
     }
 }
 
-class MeshGradient {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.time = 0;
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-    }
-
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-    }
-
-    animate() {
-        this.time += 0.005;
-        
-        const gradient = this.ctx.createRadialGradient(
-            this.canvas.width / 2 + Math.sin(this.time) * 100,
-            this.canvas.height / 2 + Math.cos(this.time) * 100,
-            0,
-            this.canvas.width / 2,
-            this.canvas.height / 2,
-            this.canvas.width
-        );
-        
-        gradient.addColorStop(0, 'rgba(0, 255, 247, 0.1)');
-        gradient.addColorStop(0.5, 'rgba(168, 85, 247, 0.05)');
-        gradient.addColorStop(1, 'rgba(5, 5, 5, 1)');
-        
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        requestAnimationFrame(() => this.animate());
-    }
-}
-
-function createShockwave(x, y) {
-    const wave = document.createElement('div');
-    wave.className = 'shockwave';
-    wave.style.left = x + 'px';
-    wave.style.top = y + 'px';
-    document.body.appendChild(wave);
-    setTimeout(() => wave.remove(), 600);
-}
-
-// Global instances - moved to end of file
-let meshGradient;
-
-// ===========================================
-// SETTINGS SYSTEM
-// ===========================================
-
-function toggleSetting(key) {
-    if (AppState.settings.hasOwnProperty(key)) {
-        AppState.settings[key] = !AppState.settings[key];
-        
-        // Apply immediate effects
-        if (key === 'sound' && !AppState.settings[key]) {
-            if (audio && audio.ctx) audio.ctx.suspend();
-        } else if (key === 'sound' && AppState.settings[key]) {
-            if (audio && audio.ctx) audio.ctx.resume();
-        }
-        
-        saveLocalState();
-        showToast('Sozlama o\'zgartirildi', key + ': ' + (AppState.settings[key] ? 'Yoqilgan' : 'O\'chirilgan'), 'success');
-    }
-}
-
-function changeTheme(theme) {
-    AppState.settings.theme = theme;
-    document.documentElement.setAttribute('data-theme', theme);
-    saveLocalState();
-    
-    // Apply specific theme styles if needed
-    if (theme === 'gold') {
-        document.documentElement.style.setProperty('--accent-primary', '#ffd700');
-    } else if (theme === 'neon') {
-        document.documentElement.style.setProperty('--accent-primary', '#00ff00');
-    } else {
-        document.documentElement.style.removeProperty('--accent-primary');
-    }
-}
-
-function clearCache() {
-    if (confirm('Rostdan ham keshni tozalab, ilovani qayta ishga tushirmoqchimisiz?')) {
-        localStorage.removeItem('nexus_state_v2');
-        location.reload();
-    }
-}
-
-// ===========================================
-// PRESTIGE SYSTEM
-// ===========================================
-
-function calculatePrestigeReward() {
-    // 1 Dark Matter per 1M accumulated coins
-    return Math.floor(AppState.mining.accumulatedCoins / 1000000);
-}
-
-function doPrestige() {
-    const reward = calculatePrestigeReward();
-    
-    if (reward < 1) {
-        showToast('Prestige tayyor emas', 'Kamida 1M coin yig\'ishingiz kerak', 'error');
-        return;
-    }
-    
-    if (!confirm(`Prestige qilasizmi? Barcha progress (coinlar, upgradelar) reset bo'ladi, lekin +${reward} Dark Matter olasiz.`)) {
-        return;
-    }
-    
-    // Reset mining progress but keep accumulated stats if needed, or just reset balance/upgrades
-    AppState.mining.balance = 0;
-    AppState.mining.energy = 1000;
-    AppState.mining.maxEnergy = 1000;
-    AppState.mining.tapPower = 1;
-    AppState.mining.autoTapRate = 0;
-    AppState.mining.upgrades = { tap: 1, energy: 1, auto: 0, luck: 1 };
-    
-    // Add Dark Matter (stored in mining or user state)
-    if (!AppState.mining.darkMatter) AppState.mining.darkMatter = 0;
-    AppState.mining.darkMatter += reward;
-    
-    // Apply Dark Matter bonus (e.g. +10% multiplier per DM)
-    AppState.mining.multiplier = 1 + (AppState.mining.darkMatter * 0.1);
-    
-    // Sync
-    updateMiningStats();
-    saveLocalState();
-    
-    // Visuals
-    createShockwave(window.innerWidth / 2, window.innerHeight / 2);
-    playSound('levelUp');
-    showToast('PRESTIGE!', `+${reward} Dark Matter olindi! Multiplier: x${AppState.mining.multiplier.toFixed(1)}`, 'success');
-    
-    checkAchievements();
-    updateUI();
-}
-
-// ===========================================
-// ACHIEVEMENTS SYSTEM
-// ===========================================
-
-const ACHIEVEMENTS = [
-    { id: 'first_tap', name: 'Birinchi qadam', icon: 'fa-shoe-prints', condition: s => s.mining.balance >= 1 },
-    { id: 'tap_1000', name: '1000 coin', icon: 'fa-coins', condition: s => s.mining.accumulatedCoins >= 1000 },
-    { id: 'level_5', name: '5-daraja', icon: 'fa-star', condition: s => s.user && s.user.level >= 5 },
-    { id: 'prestige_1', name: 'Birinchi Prestige', icon: 'fa-atom', condition: s => s.mining.darkMatter >= 1 },
-    { id: 'quiz_10', name: 'Bilimdon', icon: 'fa-brain', condition: s => s.user && s.user.quiz_count_today >= 10 }
-];
-
-function checkAchievements() {
-    if (!AppState.achievements) AppState.achievements = [];
-    
-    ACHIEVEMENTS.forEach(ach => {
-        if (!AppState.achievements.includes(ach.id) && ach.condition(AppState)) {
-            AppState.achievements.push(ach.id);
-            showToast(`🏆 Yutuq: ${ach.name}`, 'success');
-            playSound('levelUp'); // Use levelUp sound for achievements
-            saveLocalState();
-            
-            // Sync to DB if online
-            if (supabaseClient && AppState.user) {
-                supabaseClient.from('mining_data')
-                    .update({ achievements: AppState.achievements })
-                    .eq('user_id', AppState.user.user_id)
-                    .then(({ error }) => { if (error) console.error(error); });
-            }
-        }
-    });
-}
-
-function showAchievements() {
-    const list = ACHIEVEMENTS.map(ach => {
-        const isUnlocked = AppState.achievements?.includes(ach.id);
-        return `${isUnlocked ? '✅' : '🔒'} ${ach.name}`;
-    }).join('\n');
-    
-    alert('Yutuqlar:\n' + list);
-}
-
-function playSound(type) {
-    if (audio) {
-        audio.play(type);
-    }
-}
-
-// ===========================================
-// DAILY CHALLENGES SYSTEM
-// ===========================================
-
-function generateDailyChallenges() {
-    const today = new Date().toDateString();
-    const lastReset = AppState.lastChallengeReset;
-    
-    if (lastReset === today && AppState.dailyChallenges.length > 0) return;
-    
-    const challenges = [
-        { id: 'tap_500', name: '500 ta tap', target: 500, progress: 0, reward: 500, type: 'taps', claimed: false },
-        { id: 'earn_2000', name: '2000 coin yig\'ish', target: 2000, progress: 0, reward: 300, type: 'gold', claimed: false },
-        { id: 'quiz_3', name: '3 ta quiz o\'ynash', target: 3, progress: 0, reward: 400, type: 'quiz', claimed: false },
-        { id: 'upgrade_1', name: '1 ta upgrade olish', target: 1, progress: 0, reward: 200, type: 'upgrade', claimed: false }
-    ];
-    
-    AppState.dailyChallenges = challenges;
-    AppState.lastChallengeReset = today;
-    saveLocalState();
-}
-
-function updateChallengeProgress(type, amount = 1) {
-    let updated = false;
-    AppState.dailyChallenges.forEach(c => {
-        if (c.type === type && c.progress < c.target && !c.claimed) {
-            c.progress = Math.min(c.progress + amount, c.target);
-            updated = true;
-        }
-    });
-    
-    if (updated) {
-        saveLocalState();
-        // If modal is open, re-render
-        if (document.getElementById('challengesModal')?.classList.contains('active')) {
-            renderChallenges();
-        }
-    }
-}
-
-function claimChallengeReward(id) {
-    const challenge = AppState.dailyChallenges.find(c => c.id === id);
-    
-    if (!challenge || challenge.progress < challenge.target || challenge.claimed) return;
-    
-    challenge.claimed = true;
-    AppState.mining.balance += challenge.reward;
-    
-    showToast(`+${challenge.reward} coin!`, 'Vazifa bajarildi', 'success');
-    playSound('levelUp');
-    
-    updateMiningStats(); // Sync balance
-    saveLocalState();
-    renderChallenges();
-}
-
-function renderChallenges() {
-    const list = document.getElementById('challengesList');
-    if (!list) return;
-    
-    list.innerHTML = AppState.dailyChallenges.map(c => {
-        const percent = Math.min(100, (c.progress / c.target) * 100);
-        const isCompleted = c.progress >= c.target;
-        
-        return `
-            <div class="challenge-item glass-card ${isCompleted ? 'completed' : ''}" style="margin-bottom: 10px; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; border: 1px solid ${isCompleted ? 'var(--accent-green)' : 'var(--border-subtle)'};">
-                <div class="challenge-icon" style="width: 40px; height: 40px; background: rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--accent-cyan);">
-                    <i class="fas fa-${getChallengeIcon(c.type)}"></i>
-                </div>
-                <div class="challenge-info" style="flex: 1;">
-                    <div class="challenge-name" style="font-weight: 600; font-size: 0.9rem;">${c.name}</div>
-                    <div class="challenge-progress-bar" style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 6px; overflow: hidden;">
-                        <div class="challenge-progress-fill" style="width: ${percent}%; height: 100%; background: var(--accent-primary);"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
-                        <span>${c.progress}/${c.target}</span>
-                        <span style="color: var(--accent-gold);">+${c.reward} coin</span>
-                    </div>
-                </div>
-                ${isCompleted && !c.claimed ? 
-                    `<button onclick="claimChallengeReward('${c.id}')" style="padding: 6px 12px; background: var(--accent-green); border: none; border-radius: 6px; color: white; font-weight: 600; font-size: 0.75rem;">Olish</button>` : 
-                    c.claimed ? `<div style="color: var(--accent-green);"><i class="fas fa-check"></i></div>` : ''
-                }
-            </div>
-        `;
-    }).join('');
-}
-
-function getChallengeIcon(type) {
-    switch(type) {
-        case 'taps': return 'hand-pointer';
-        case 'gold': return 'coins';
-        case 'quiz': return 'brain';
-        case 'upgrade': return 'arrow-up';
-        default: return 'star';
-    }
-}
-
-function showDailyChallenge() {
-    generateDailyChallenges();
-    renderChallenges();
-    document.getElementById('challengesModal').classList.add('active');
-}
-
-// ===========================================
-// FLASHCARDS & MINDMAP
-// ===========================================
-
-const MOCK_FLASHCARDS = [
-    { q: "Sun'iy intellekt (AI) nima?", a: "Inson ongini talab qiladigan vazifalarni bajaradigan kompyuter tizimlari." },
-    { q: "Machine Learning nima?", a: "Kompyuterlarga ma'lumotlardan o'rganish imkonini beruvchi algoritmlar." },
-    { q: "Neural Network nima?", a: "Inson miyasi tuzilishidan ilhomlangan hisoblash modellari." },
-    { q: "Deep Learning nima?", a: "Ko'p qatlamli neyron tarmoqlariga asoslangan ML turi." },
-    { q: "Big Data nima?", a: "An'anaviy usullar bilan qayta ishlash qiyin bo'lgan katta hajmdagi ma'lumotlar." }
-];
-
-let currentFlashcardIndex = 0;
-
-function openFlashcards() {
-    currentFlashcardIndex = 0;
-    loadFlashcard(0);
-    document.getElementById('flashcardsModal').classList.add('active');
-}
-
-function loadFlashcard(index) {
-    if (index >= MOCK_FLASHCARDS.length) {
-        showToast('Tugatildi', 'Barcha kartalar o\'rganildi! +50 XP', 'success');
-        addXP(50, 'flashcards');
-        closeModal('flashcardsModal');
-        return;
-    }
-    
-    const card = MOCK_FLASHCARDS[index];
-    const inner = document.getElementById('flashcardInner');
-    
-    // Reset flip
-    inner.style.transform = 'rotateY(0deg)';
-    
-    // Update content with small delay to hide transition if needed, 
-    // but here we update immediately for front, back update doesn't matter if hidden
-    document.getElementById('flashcardQuestion').textContent = card.q;
-    document.getElementById('flashcardAnswer').textContent = card.a;
-}
-
-function flipFlashcard() {
-    const inner = document.getElementById('flashcardInner');
-    const currentTransform = inner.style.transform;
-    
-    if (currentTransform === 'rotateY(180deg)') {
-        inner.style.transform = 'rotateY(0deg)';
-    } else {
-        inner.style.transform = 'rotateY(180deg)';
-    }
-}
-
-function nextFlashcard(result) {
-    // Visual feedback based on result (optional)
-    if (result === 'wrong') {
-        // Maybe repeat later? For now just next
-    }
-    
-    currentFlashcardIndex++;
-    loadFlashcard(currentFlashcardIndex);
-}
-
-function createMindmap() {
-    showToast('AI Mind Map', 'Mavzu bo\'yicha mind map generatsiya qilinmoqda...', 'info');
-    
-    setTimeout(() => {
-        showToast('Tayyor', 'Mind Map tayyor! (Demo)', 'success');
-        // In real app, open image or interactive view
-    }, 2000);
-}
-
-async function syncRPGData() {
-    if (!AppState.user) return;
-    console.log('Syncing RPG data...');
-    // This is a placeholder for any additional sync logic needed
-    // Most data is already loaded in loadUserData
-    await sleep(100); 
-}
-
-// ===========================================
-// PREMIUM PURCHASE FLOW
-// ===========================================
-
-function showPremiumPurchaseModal(planType) {
-    // planType: 'premium_week', 'premium_month', 'exclusive_week', 'exclusive_month'
-    const prices = CONFIG.PREMIUM_PRICES;
-    const planNames = {
-        'premium_week': 'Premium 1 haftalik',
-        'premium_month': 'Premium 1 oylik',
-        'exclusive_week': 'Exclusive 1 haftalik',
-        'exclusive_month': 'Exclusive 1 oylik'
-    };
-    
-    const price = prices[planType] || 12990;
-    const planName = planNames[planType] || 'Premium';
-    
-    // Create modal HTML
-    const modalHtml = `
-        <div class="modal-header">
-            <h2>💳 To'lov ma'lumotlari</h2>
-            <button class="modal-close" onclick="closeModal('premiumPurchaseModal')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="payment-info">
-                <div class="plan-selected">
-                    <span class="plan-icon">${planType.includes('exclusive') ? '💎' : '👑'}</span>
-                    <span class="plan-name">${planName}</span>
-                    <span class="plan-price">${price.toLocaleString()} so'm</span>
-                </div>
-                
-                <div class="payment-card-section">
-                    <h3>🏦 To'lov kartasi:</h3>
-                    <div class="card-number" onclick="copyPaymentCard()">
-                        <code>${CONFIG.PAYMENT_CARD}</code>
-                        <span class="copy-icon">📋</span>
-                    </div>
-                    <p class="card-holder">👤 ${CONFIG.PAYMENT_HOLDER}</p>
-                </div>
-                
-                <div class="payment-steps">
-                    <h3>📋 Yo'riqnoma:</h3>
-                    <ol>
-                        <li>Yuqoridagi kartaga <b>${price.toLocaleString()} so'm</b> o'tkazing</li>
-                        <li>To'lov chekini rasmga oling</li>
-                        <li>"Chek yuborish" tugmasini bosing</li>
-                        <li>Admin 24 soat ichida tekshiradi</li>
-                    </ol>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-primary" onclick="sendPaymentReceipt('${planType}', ${price})">
-                📤 Chek yuborish
-            </button>
-            <button class="btn-secondary" onclick="closeModal('premiumPurchaseModal')">
-                Bekor qilish
-            </button>
-        </div>
-    `;
-    
-    // Check if modal exists, if not create it
-    let modal = document.getElementById('premiumPurchaseModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'premiumPurchaseModal';
-        modal.className = 'modal';
-        document.body.appendChild(modal);
-    }
-    
-    modal.innerHTML = `<div class="modal-content">${modalHtml}</div>`;
-    modal.classList.add('active');
-}
-
-function copyPaymentCard() {
-    navigator.clipboard.writeText(CONFIG.PAYMENT_CARD.replace(/\s/g, '')).then(() => {
-        showToast('Nusxalandi', 'Karta raqami nusxalandi!', 'success');
-    }).catch(() => {
-        showToast('Xatolik', 'Nusxalashda xatolik', 'error');
-    });
-}
-
-function sendPaymentReceipt(planType, price) {
-    const userId = AppState.telegramUser?.id || AppState.user?.user_id;
-    
-    if (!userId) {
-        showToast('Xatolik', 'Foydalanuvchi topilmadi', 'error');
-        return;
-    }
-    
-    // Close modal first
-    closeModal('premiumPurchaseModal');
-    
-    // Use Telegram WebApp to send data back to bot
-    if (window.Telegram?.WebApp) {
-        const data = {
-            action: 'premium_purchase',
-            plan: planType,
-            price: price,
-            user_id: userId,
-            timestamp: Date.now()
-        };
-        
-        // Send data to bot
-        window.Telegram.WebApp.sendData(JSON.stringify(data));
-        
-        showToast('Yuborildi', 'So\'rov botga yuborildi. Chek yuborish uchun botga qayting.', 'success');
-        
-        // Close WebApp after short delay
-        setTimeout(() => {
-            window.Telegram.WebApp.close();
-        }, 2000);
-    } else {
-        // Fallback: Open bot with deep link
-        const botUsername = CONFIG.BOT_USERNAME;
-        const deepLink = `https://t.me/${botUsername}?start=premium_${planType}_${userId}`;
-        
-        showToast('Botga o\'tish', 'Botda chek yuborish uchun yo\'naltirilmoqda...', 'info');
-        
-        setTimeout(() => {
-            window.open(deepLink, '_blank');
-        }, 1500);
-    }
-}
-
-function buyPremium(planType) {
-    showPremiumPurchaseModal(planType);
-}
-
-// ===========================================
-// TELEGRAM STARS PAYMENT (INTERNATIONAL)
-// ===========================================
-
-const STARS_PRICES = {
-    'premium_week': { stars: 150, usd: 2.99 },
-    'premium_month': { stars: 500, usd: 9.99 },
-    'exclusive_week': { stars: 200, usd: 3.99 },
-    'exclusive_month': { stars: 750, usd: 14.99 }
-};
-
-function showStarsPayment() {
-    const modalHtml = `
-        <div class="modal-header stars-header">
-            <h2>⭐ Telegram Stars bilan to'lash</h2>
-            <button class="modal-close" onclick="closeModal('starsPaymentModal')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="stars-info-banner">
-                <div class="stars-icon-large">⭐</div>
-                <p>Telegram Stars — xalqaro to'lov tizimi. Visa, Mastercard va boshqa kartalar qabul qilinadi!</p>
-            </div>
-            
-            <div class="stars-plans">
-                <div class="stars-plan-card" onclick="initiateStarsPayment('premium_week')">
-                    <div class="stars-plan-icon">👑</div>
-                    <div class="stars-plan-info">
-                        <h4>Premium 1 hafta</h4>
-                        <p>100 AI savol/kun, barcha kitoblar</p>
-                    </div>
-                    <div class="stars-plan-price">
-                        <span class="stars-amount">⭐ 150</span>
-                        <span class="usd-amount">~$2.99</span>
-                    </div>
-                </div>
-                
-                <div class="stars-plan-card popular" onclick="initiateStarsPayment('premium_month')">
-                    <div class="popular-tag">ENG FOYDALI</div>
-                    <div class="stars-plan-icon">👑</div>
-                    <div class="stars-plan-info">
-                        <h4>Premium 1 oy</h4>
-                        <p>100 AI savol/kun, barcha kitoblar</p>
-                    </div>
-                    <div class="stars-plan-price">
-                        <span class="stars-amount">⭐ 500</span>
-                        <span class="usd-amount">~$9.99</span>
-                    </div>
-                </div>
-                
-                <div class="stars-plan-card exclusive" onclick="initiateStarsPayment('exclusive_week')">
-                    <div class="stars-plan-icon">💎</div>
-                    <div class="stars-plan-info">
-                        <h4>Exclusive 1 hafta</h4>
-                        <p>999 AI savol/kun, VIP imtiyozlar</p>
-                    </div>
-                    <div class="stars-plan-price">
-                        <span class="stars-amount">⭐ 200</span>
-                        <span class="usd-amount">~$3.99</span>
-                    </div>
-                </div>
-                
-                <div class="stars-plan-card exclusive" onclick="initiateStarsPayment('exclusive_month')">
-                    <div class="stars-plan-icon">💎</div>
-                    <div class="stars-plan-info">
-                        <h4>Exclusive 1 oy</h4>
-                        <p>999 AI savol/kun, VIP imtiyozlar</p>
-                    </div>
-                    <div class="stars-plan-price">
-                        <span class="stars-amount">⭐ 750</span>
-                        <span class="usd-amount">~$14.99</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stars-note">
-                <i class="fas fa-info-circle"></i>
-                <span>To'lov Telegram orqali xavfsiz amalga oshiriladi. Stars sotib olish uchun Telegram ilovasidan foydalaning.</span>
-            </div>
-        </div>
-    `;
-    
-    let modal = document.getElementById('starsPaymentModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'starsPaymentModal';
-        modal.className = 'modal';
-        document.body.appendChild(modal);
-    }
-    
-    modal.innerHTML = `<div class="modal-content stars-modal-content">${modalHtml}</div>`;
-    modal.classList.add('active');
-}
-
-function initiateStarsPayment(planType) {
-    const userId = AppState.telegramUser?.id || AppState.user?.user_id;
-    const starsPrice = STARS_PRICES[planType];
-    
-    if (!starsPrice) {
-        showToast('Xatolik', 'Noto\'g\'ri tarif', 'error');
-        return;
-    }
-    
-    closeModal('starsPaymentModal');
-    
-    if (window.Telegram?.WebApp) {
-        // Use Telegram's native invoice system
-        const invoiceData = {
-            action: 'stars_payment',
-            plan: planType,
-            stars: starsPrice.stars,
-            user_id: userId,
-            timestamp: Date.now()
-        };
-        
-        // Send to bot to create invoice
-        window.Telegram.WebApp.sendData(JSON.stringify(invoiceData));
-        
-        showToast('To\'lov', 'Telegram Stars invoice yaratilmoqda...', 'info');
-        
-        setTimeout(() => {
-            window.Telegram.WebApp.close();
-        }, 1500);
-    } else {
-        // Fallback: Direct bot link with deep link
-        const botUsername = CONFIG.BOT_USERNAME;
-        const deepLink = `https://t.me/${botUsername}?start=stars_${planType}_${userId}`;
-        
-        showToast('Botga o\'tish', 'To\'lov uchun botga yo\'naltirilmoqda...', 'info');
-        
-        setTimeout(() => {
-            window.open(deepLink, '_blank');
-        }, 1000);
-    }
-}
-
-// ===========================================
-// UI UPDATES (GSAP Enhanced)
-// ===========================================
-
-function updateUI() {
-    const user = AppState.user;
-    if (!user) return;
-    
-    // Reveal performance hub once data is available
-    const perfLoader = document.getElementById('performanceLoader');
-    const perfHub = document.getElementById('performanceHub');
-    if (perfLoader) perfLoader.classList.add('hidden');
-    if (perfHub) perfHub.classList.remove('hidden');
-    
-    // Header
-    document.getElementById('userName').textContent = user.full_name || 'Foydalanuvchi';
-    document.getElementById('userAvatar').textContent = (user.full_name || 'U')[0].toUpperCase();
-    
-    // Animate numbers
-    ANIMATIONS.animateNumber('headerXP', user.xp || 0);
-    ANIMATIONS.animateNumber('headerGold', user.gold || 0);
-    
-    // User tier
-    const tierEl = document.getElementById('userTier');
-    const tierName = user.premium_type === 'exclusive' ? 'Exclusive' : 
-                     user.premium_type === 'premium' ? 'Premium' : 'Free';
-    tierEl.innerHTML = `<i class="fas fa-circle"></i><span>${tierName}</span>`;
-    tierEl.className = `user-tier ${user.is_premium ? 'premium' : ''}`;
-    
-    // Level insights
-    const levelInfo = calculateLevel(user.xp || 0);
-    const nextXPDelta = Math.max(0, (levelInfo.nextLevelXP || 0) - (levelInfo.levelXP || 0));
-    
-    const levelNameEl = document.getElementById('levelName');
-    if (levelNameEl) levelNameEl.textContent = levelInfo.name;
-    
-    const statLevelLarge = document.getElementById('statLevelLarge');
-    if (statLevelLarge) statLevelLarge.textContent = levelInfo.level;
-    
-    const levelProgressFill = document.getElementById('levelProgressFill');
-    if (levelProgressFill) {
-        gsap.to(levelProgressFill, { width: `${levelInfo.percent}%`, duration: 0.6, ease: 'power2.out' });
-    }
-    
-    const levelCurrentXP = document.getElementById('levelCurrentXP');
-    if (levelCurrentXP) {
-        levelCurrentXP.textContent = `${formatNumber(levelInfo.levelXP)} / ${formatNumber(levelInfo.nextLevelXP)} XP`;
-    }
-    
-    const levelNextXP = document.getElementById('levelNextXP');
-    if (levelNextXP) {
-        levelNextXP.textContent = `${formatNumber(nextXPDelta)} XP to go`;
-    }
-    
-    const xpDelta = document.getElementById('xpDelta');
-    if (xpDelta) xpDelta.textContent = `${formatNumber(nextXPDelta)} XP`;
-    
-    // Focus cards
-    const streakValue = user.streak_count || 0;
-    const streakValueEl = document.getElementById('streakValue');
-    if (streakValueEl) streakValueEl.textContent = streakValue;
-    
-    const streakNote = document.getElementById('streakNote');
-    if (streakNote) {
-        streakNote.textContent = streakValue > 0 ? `${streakValue} kun ketma-ket` : 'Start your streak';
-    }
-    
-    const streakProgress = document.getElementById('streakProgress');
-    if (streakProgress) {
-        const streakPercent = Math.min(100, (streakValue / 7) * 100);
-        streakProgress.style.width = `${streakPercent}%`;
-    }
-    
-    const rankValue = document.getElementById('rankValue');
-    if (rankValue) rankValue.textContent = user.rank_position ? `#${user.rank_position}` : '#--';
-    
-    const rankNote = document.getElementById('rankNote');
-    if (rankNote) {
-        rankNote.textContent = user.rank_position ? 'Top joyda davom eting' : 'Top bo‘lish uchun raqobat';
-    }
-    
-    // Quiz limits
-    const limit = CONFIG.QUIZ_LIMITS[user.premium_type] || CONFIG.QUIZ_LIMITS.free;
-    const used = user.quiz_count_today || 0;
-    const remaining = Math.max(0, limit - used);
-    
-    AppState.quiz.remaining = remaining;
-    AppState.quiz.total = limit;
-    
-    const quizUsage = document.getElementById('quizUsage');
-    if (quizUsage) quizUsage.textContent = `${used}/${limit}`;
-    
-    const quizNote = document.getElementById('quizNote');
-    if (quizNote) quizNote.textContent = remaining > 0 ? `${remaining} ta savol qoldi` : 'Premiumda cheksiz';
-    
-    const quizUsageBar = document.getElementById('quizUsageBar');
-    if (quizUsageBar) {
-        const usagePercent = Math.min(100, (used / limit) * 100);
-        quizUsageBar.style.width = `${usagePercent}%`;
-    }
-    
-    const quizRemainingEl = document.getElementById('quizRemaining');
-    if (quizRemainingEl) quizRemainingEl.textContent = remaining;
-    const quizTotalEl = document.getElementById('quizTotal');
-    if (quizTotalEl) quizTotalEl.textContent = limit;
-    
-    // Badge strip
-    const badgeQuiz = document.getElementById('badgeQuizzes');
-    if (badgeQuiz) badgeQuiz.querySelector('.chip-value').textContent = `${used} ta`;
-    
-    const badgeFocus = document.getElementById('badgeFocus');
-    if (badgeFocus) {
-        const focusMinutes = user.focus_minutes || (streakValue * 10);
-        badgeFocus.querySelector('.chip-value').textContent = `${focusMinutes} min`;
-    }
-    
-    const badgeGold = document.getElementById('badgeGold');
-    if (badgeGold) badgeGold.querySelector('.chip-value').textContent = formatNumber(user.gold || 0);
-    
-    // Mining balance
-    ANIMATIONS.animateNumber('miningBalance', Math.floor(AppState.mining.balance));
-    
-    // Profile
-    const profileNameEl = document.getElementById('profileName');
-    if (profileNameEl) profileNameEl.textContent = user.full_name || 'Foydalanuvchi';
-    
-    const profileTierEl = document.getElementById('profileTier');
-    if (profileTierEl) {
-        profileTierEl.textContent = tierName + (user.is_premium ? ' Plan' : ' Account');
-        profileTierEl.style.color = user.is_premium ? 'var(--accent-gold)' : 'var(--text-muted)';
-    }
-    
-    ANIMATIONS.animateNumber('profileXP', user.xp || 0);
-    ANIMATIONS.animateNumber('profileGold', user.gold || 0);
-    
-    const profileLevelEl = document.getElementById('profileLevel');
-    if (profileLevelEl) profileLevelEl.textContent = user.level || 1;
-    
-    const profileAvatarLarge = document.getElementById('profileAvatarLarge');
-    if (profileAvatarLarge) {
-        profileAvatarLarge.textContent = (user.full_name || 'U')[0].toUpperCase();
-    }
-
-    const statStreakProfile = document.getElementById('statStreakProfile');
-    if (statStreakProfile) statStreakProfile.textContent = streakValue;
-    
-    const statQuizzesProfile = document.getElementById('statQuizzesProfile');
-    if (statQuizzesProfile) statQuizzesProfile.textContent = used;
-    
-    // Energy bar
-    const energyFill = document.getElementById('energyFill');
-    if (energyFill) {
-        const energyPercent = (AppState.mining.energy / CONFIG.MAX_ENERGY) * 100;
-        gsap.to(energyFill, { width: energyPercent + '%', duration: 0.5, ease: 'power2.out' });
-    }
-    
-    // Prestige UI
-    const prestigeSection = document.getElementById('prestigeSection');
-    const prestigeRewardEl = document.getElementById('prestigeReward');
-    
-    if (prestigeSection && prestigeRewardEl) {
-        const reward = calculatePrestigeReward();
-        prestigeRewardEl.textContent = formatNumber(reward);
-        prestigeSection.style.display = reward >= 1 ? 'block' : 'none';
-    }
-}
-
-function navigateTo(section) {
-    const currentId = AppState.currentSection === 'home' ? 'sectionHome' : 
-                      AppState.currentSection === 'quiz' ? 'sectionQuiz' : 
-                      'section' + AppState.currentSection.charAt(0).toUpperCase() + AppState.currentSection.slice(1);
-                      
-    const targetMap = {
-        'home': 'sectionHome',
-        'quiz': 'sectionQuiz',
-        'gamification': 'sectionGamification',
-        'premium': 'sectionPremium',
-        'battle': 'sectionBattle',
-        'profile': 'sectionProfile',
-        'new_features': 'sectionNewFeatures',
-        'wayground': 'sectionWayground',
-        'bot_tests': 'sectionBotTests'
-    };
-    
-    const targetId = targetMap[section] || 'sectionHome';
-    
-    // Use GSAP Controller
-    ANIMATIONS.switchSection(currentId, targetId);
-    
-    // Special handling
-    if (section === 'gamification') renderLeaderboard();
-    if (section === 'wayground') loadWaygroundRooms();
-    if (section === 'bot_tests') loadBotTestCategories();
-    
-    // Update nav
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.section === section);
-    });
-    
-    AppState.currentSection = section;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function handleTap(e) {
-    if (AppState.mining.energy <= 0) {
-        showToast('Energiya tugadi', 'Energiya tiklanishini kuting', 'error');
-        triggerFeedback('error');
-        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-        return;
-    }
-    
-    if (audio && audio.ctx && audio.ctx.state === 'suspended') {
-        audio.ctx.resume();
-    }
-    
-    // Critical Hit
-    const isCritical = Math.random() * 100 < (AppState.mining.critChance || 5);
-    const baseReward = AppState.mining.tapPower * AppState.mining.multiplier;
-    const reward = isCritical ? baseReward * 2 : baseReward;
-    
-    AppState.mining.energy = Math.max(0, AppState.mining.energy - CONFIG.TAP_COST);
-    AppState.mining.balance += reward;
-    AppState.mining.accumulatedCoins = (AppState.mining.accumulatedCoins || 0) + reward;
-    
-    // GSAP Animation
-    ANIMATIONS.animateTap(document.querySelector('.tap-circle'));
-    
-    const rect = e.target.getBoundingClientRect();
-    const x = e.clientX || (rect.left + rect.width / 2);
-    const y = e.clientY || (rect.top + rect.height / 2);
-    
-    // Floating Text
-    const text = isCritical ? 'CRIT!' : '+' + Math.floor(reward);
-    ANIMATIONS.spawnFloater(x, y, text, isCritical);
-    
-    // Particles
-    if (particleSystem) {
-        particleSystem.emit(x, y, isCritical ? 20 : 8, isCritical ? '#ff006e' : '#ffd700');
-    }
-    createShockwave(x, y);
-    
-    // Audio & Haptic
-    if (isCritical) {
-        playSound('critical');
-        triggerFeedback('critical');
-    } else {
-        playSound('tap');
-        triggerFeedback('tap');
-    }
-    
-    // Logic
-    if (AppState.mining.balance >= 1) checkAchievements();
-    if (AppState.mining.accumulatedCoins >= 1000) checkAchievements();
-    updateChallengeProgress('taps', 1);
-    updateChallengeProgress('gold', reward);
-    
-    updateUI();
-}
-
-// ===========================================
-// WAYGROUND - COLLABORATIVE WORKSPACE
-// ===========================================
-
-let waygroundRooms = [];
-let currentWaygroundRoom = null;
-
-async function loadWaygroundRooms() {
-    const listEl = document.getElementById('waygroundRoomsList');
-    if (!listEl) return;
-    
-    try {
-        if (supabaseClient) {
-            const { data, error } = await supabaseClient
-                .from('wayground_rooms')
-                .select('*')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false })
-                .limit(10);
-            
-            if (data && data.length > 0) {
-                waygroundRooms = data;
-                renderWaygroundRooms();
-                return;
-            }
-        }
-    } catch (e) {
-        console.log('Wayground rooms load:', e);
-    }
-    
-    // Show empty state
-    listEl.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-inbox"></i>
-            <p>Hozircha faol xonalar yo'q</p>
-            <button class="start-quiz-btn" onclick="createWaygroundRoom()">
-                <i class="fas fa-plus"></i> Birinchi xonani yarating
-            </button>
-        </div>
-    `;
-}
-
-function renderWaygroundRooms() {
-    const listEl = document.getElementById('waygroundRoomsList');
-    if (!listEl || waygroundRooms.length === 0) return;
-    
-    listEl.innerHTML = waygroundRooms.map(room => `
-        <div class="room-item glass-card" onclick="joinWaygroundRoomById('${room.id}')">
-            <div class="room-avatar">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="room-info">
-                <div class="room-name">${room.name || 'Xona #' + room.id.slice(0,4)}</div>
-                <div class="room-members">${room.member_count || 1} ishtirokchi • ${room.type || 'study'}</div>
-            </div>
-            <i class="fas fa-chevron-right" style="color: var(--text-muted);"></i>
-        </div>
-    `).join('');
-}
-
-async function createWaygroundRoom() {
-    const roomName = prompt("Xona nomini kiriting:", "Mening xonam");
-    if (!roomName) return;
-    
-    showToast('Yaratilmoqda...', 'Xona yaratilmoqda', 'info');
-    
-    try {
-        if (supabaseClient && AppState.user) {
-            const roomId = 'WG' + Date.now().toString(36).toUpperCase();
-            
-            const { data, error } = await supabaseClient
-                .from('wayground_rooms')
-                .insert({
-                    id: roomId,
-                    name: roomName,
-                    creator_id: AppState.user.user_id,
-                    type: 'study',
-                    is_active: true,
-                    member_count: 1,
-                    settings: { max_members: 10, allow_chat: true }
-                })
-                .select()
-                .single();
-            
-            if (error) throw error;
-            
-            currentWaygroundRoom = data;
-            showToast('Muvaffaqiyat!', `"${roomName}" xonasi yaratildi`, 'success');
-            
-            // Share room code
-            const shareText = `🎯 Wayground xonasiga qo'shiling!\n\nXona: ${roomName}\nKod: ${roomId}\n\nBot: @${CONFIG.BOT_USERNAME}`;
-            
-            if (window.Telegram?.WebApp) {
-                Telegram.WebApp.switchInlineQuery(roomId, ['users']);
-            } else {
-                navigator.clipboard.writeText(shareText);
-                showToast('Nusxalandi', 'Xona kodi nusxalandi', 'success');
-            }
-            
-            loadWaygroundRooms();
-        } else {
-            // Fallback - open bot
-            openBotWithCommand('wayground_create');
-        }
-    } catch (e) {
-        console.error('Create room error:', e);
-        showToast('Xatolik', 'Xona yaratib bo\'lmadi', 'error');
-    }
-}
-
-async function joinWaygroundRoom() {
-    const roomCode = prompt("Xona kodini kiriting:");
-    if (!roomCode) return;
-    
-    await joinWaygroundRoomById(roomCode.trim().toUpperCase());
-}
-
-async function joinWaygroundRoomById(roomId) {
-    showToast('Qo\'shilmoqda...', 'Xonaga kirilmoqda', 'info');
-    
-    try {
-        if (supabaseClient && AppState.user) {
-            // Check if room exists
-            const { data: room, error } = await supabaseClient
-                .from('wayground_rooms')
-                .select('*')
-                .eq('id', roomId)
-                .eq('is_active', true)
-                .single();
-            
-            if (error || !room) {
-                showToast('Xatolik', 'Xona topilmadi', 'error');
-                return;
-            }
-            
-            // Add as member
-            await supabaseClient
-                .from('wayground_members')
-                .upsert({
-                    room_id: roomId,
-                    user_id: AppState.user.user_id,
-                    joined_at: new Date().toISOString()
-                });
-            
-            // Update member count
-            await supabaseClient
-                .from('wayground_rooms')
-                .update({ member_count: (room.member_count || 1) + 1 })
-                .eq('id', roomId);
-            
-            currentWaygroundRoom = room;
-            showToast('Muvaffaqiyat!', `"${room.name}" xonasiga qo'shildingiz`, 'success');
-            
-            // Open room in bot for full features
-            openBotWithCommand(`wayground_join_${roomId}`);
-        } else {
-            openBotWithCommand(`wayground_join_${roomId}`);
-        }
-    } catch (e) {
-        console.error('Join room error:', e);
-        showToast('Xatolik', 'Xonaga kirib bo\'lmadi', 'error');
-    }
-}
-
-// ===========================================
-// BOT TESTS - TELEGRAM BOT INTEGRATION
-// ===========================================
-
-let botTestCategories = [];
-let recentBotTests = [];
-
-function loadBotTestCategories() {
-    // Categories are static in HTML, but we can load counts from API
-    loadRecentBotTests();
-}
-
-async function loadRecentBotTests() {
-    const listEl = document.getElementById('recentBotTests');
-    if (!listEl) return;
-    
-    try {
-        if (supabaseClient && AppState.user) {
-            const { data, error } = await supabaseClient
-                .from('user_quiz_history')
-                .select('*')
-                .eq('user_id', AppState.user.user_id)
-                .order('completed_at', { ascending: false })
-                .limit(5);
-            
-            if (data && data.length > 0) {
-                recentBotTests = data;
-                renderRecentBotTests();
-                return;
-            }
-        }
-    } catch (e) {
-        console.log('Recent tests load:', e);
-    }
-    
-    // Show empty state
-    listEl.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-clipboard-list"></i>
-            <p>Hali test yechmagansiz</p>
-        </div>
-    `;
-}
-
-function renderRecentBotTests() {
-    const listEl = document.getElementById('recentBotTests');
-    if (!listEl || recentBotTests.length === 0) return;
-    
-    listEl.innerHTML = recentBotTests.map(test => `
-        <div class="test-item">
-            <div class="test-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="test-info">
-                <div class="test-name">${test.quiz_name || 'Test #' + test.id}</div>
-                <div class="test-result">${test.correct_count}/${test.total_questions} to'g'ri • ${formatTimeAgo(test.completed_at)}</div>
-            </div>
-            <div class="test-score">${Math.round((test.correct_count / test.total_questions) * 100)}%</div>
-        </div>
-    `).join('');
-}
-
-function loadBotTests(category) {
-    // Send user to bot with specific test category
-    const categoryCommands = {
-        'dtm': 'dtm_tests',
-        'english': 'english_tests',
-        'math': 'math_tests',
-        'science': 'science_tests',
-        'history': 'history_tests',
-        'it': 'it_tests'
-    };
-    
-    const command = categoryCommands[category] || 'tests';
-    
-    showToast('Yuklanmoqda...', `${category.toUpperCase()} testlari`, 'info');
-    
-    // Send data to bot via WebApp
-    if (window.Telegram?.WebApp) {
-        Telegram.WebApp.sendData(JSON.stringify({
-            action: 'load_tests',
-            category: category
-        }));
-        
-        // Also open bot
-        setTimeout(() => {
-            openBotWithCommand(command);
-        }, 500);
-    } else {
-        openBotWithCommand(command);
-    }
-}
-
-function openBotForTest() {
-    openBotWithCommand('create_test');
-}
-
-function openBotWithCommand(command) {
-    const botUrl = `https://t.me/${CONFIG.BOT_USERNAME}?start=${command}`;
-    
-    if (window.Telegram?.WebApp) {
-        Telegram.WebApp.openTelegramLink(botUrl);
-    } else {
-        window.open(botUrl, '_blank');
-    }
-}
-
-function formatTimeAgo(dateStr) {
-    if (!dateStr) return '';
-    
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'hozirgina';
-    if (diffMins < 60) return `${diffMins} daqiqa oldin`;
-    if (diffHours < 24) return `${diffHours} soat oldin`;
-    if (diffDays < 7) return `${diffDays} kun oldin`;
-    
-    return date.toLocaleDateString('uz-UZ');
-}
-
-// ===========================================
-// MISSING UTILITY FUNCTIONS
-// ===========================================
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-function showToast(title, message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.style.cssText = `
-        background: rgba(20, 20, 30, 0.95);
-        border: 1px solid ${type === 'success' ? 'var(--accent-green)' : type === 'error' ? 'var(--accent-pink)' : 'var(--accent-primary)'};
-        border-radius: 12px;
-        padding: 12px 16px;
-        min-width: 250px;
-        max-width: 350px;
-        backdrop-filter: blur(10px);
-        animation: slideInRight 0.3s ease;
-    `;
-    
-    const iconMap = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
-    const colorMap = { success: 'var(--accent-green)', error: 'var(--accent-pink)', info: 'var(--accent-cyan)', warning: 'var(--accent-gold)' };
-    
-    toast.innerHTML = `
-        <div style="display: flex; align-items: flex-start; gap: 12px;">
-            <i class="fas ${iconMap[type] || iconMap.info}" style="color: ${colorMap[type] || colorMap.info}; font-size: 1.2rem; margin-top: 2px;"></i>
-            <div style="flex: 1;">
-                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">${title}</div>
-                ${message ? `<div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px;">${message}</div>` : ''}
-            </div>
-            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0;"><i class="fas fa-times"></i></button>
-        </div>
-    `;
-    
-    container.appendChild(toast);
-    setTimeout(() => { if (toast.parentElement) { toast.style.animation = 'slideOutRight 0.3s ease'; setTimeout(() => toast.remove(), 300); } }, 4000);
-}
-
-function formatNumber(num) {
-    if (num === undefined || num === null) return '0';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return Math.floor(num).toLocaleString();
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function addXP(amount, source = 'unknown') {
-    if (!AppState.user) return;
-    AppState.user.xp = (AppState.user.xp || 0) + amount;
-    
-    const oldLevel = AppState.user.level || 1;
-    const newLevel = Math.floor(Math.sqrt(AppState.user.xp / 100)) + 1;
-    
-    if (newLevel > oldLevel) {
-        AppState.user.level = newLevel;
-        showToast('Level Up!', `Siz ${newLevel}-darajaga chiqdingiz!`, 'success');
-        playSound('levelUp');
-    }
-    
-    if (supabaseClient) {
-        await supabaseClient.from('users').update({ xp: AppState.user.xp, level: AppState.user.level }).eq('user_id', AppState.user.user_id);
-    }
-    updateUI();
-    saveLocalState();
-}
-
-async function addGold(amount, source = 'unknown') {
-    if (!AppState.user) return;
-    AppState.user.gold = (AppState.user.gold || 0) + amount;
-    
-    if (supabaseClient) {
-        await supabaseClient.from('users').update({ gold: AppState.user.gold }).eq('user_id', AppState.user.user_id);
-    }
-    updateUI();
-    saveLocalState();
-}
-
-async function updateUserStats(updates) {
-    if (!AppState.user) return false;
-    Object.assign(AppState.user, updates);
-    
-    if (supabaseClient) {
-        try {
-            await supabaseClient.from('users').update(updates).eq('user_id', AppState.user.user_id);
-        } catch (e) { console.error('Update user stats error:', e); }
-    }
-    updateUI();
-    saveLocalState();
-    return true;
-}
-
-function createShockwave(x, y) {
-    const shockwave = document.createElement('div');
-    shockwave.style.cssText = `
-        position: fixed; left: ${x}px; top: ${y}px; width: 10px; height: 10px;
-        border: 2px solid var(--accent-primary); border-radius: 50%;
-        pointer-events: none; transform: translate(-50%, -50%); z-index: 9998;
-    `;
-    document.body.appendChild(shockwave);
-    
-    if (window.gsap) {
-        gsap.to(shockwave, { width: 100, height: 100, opacity: 0, duration: 0.5, ease: 'power2.out', onComplete: () => shockwave.remove() });
-    } else {
-        shockwave.style.animation = 'shockwave 0.5s ease-out forwards';
-        setTimeout(() => shockwave.remove(), 500);
-    }
-}
-
-// Particle System
-class ParticleSystem {
-    constructor() { this.particles = []; }
-    
-    emit(x, y, count = 10, color = '#ffd700') {
-        for (let i = 0; i < count; i++) {
-            const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: fixed; left: ${x}px; top: ${y}px; width: 6px; height: 6px;
-                background: ${color}; border-radius: 50%; pointer-events: none; z-index: 9997;
-            `;
-            document.body.appendChild(particle);
-            
-            const angle = (Math.PI * 2 / count) * i;
-            const velocity = 50 + Math.random() * 100;
-            const endX = x + Math.cos(angle) * velocity;
-            const endY = y + Math.sin(angle) * velocity;
-            
-            if (window.gsap) {
-                gsap.to(particle, { left: endX, top: endY, opacity: 0, scale: 0, duration: 0.6, ease: 'power2.out', onComplete: () => particle.remove() });
-            } else {
-                setTimeout(() => particle.remove(), 600);
-            }
-        }
-    }
-}
-
-const particleSystem = new ParticleSystem();
-
-function initVisuals() {
-    console.log('Visuals initialized');
-    // Add CSS animations if not present
-    if (!document.getElementById('dynamicStyles')) {
-        const style = document.createElement('style');
-        style.id = 'dynamicStyles';
-        style.textContent = `
-            @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-            @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-            @keyframes shockwave { from { width: 10px; height: 10px; opacity: 1; } to { width: 100px; height: 100px; opacity: 0; } }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-function initMining() {
+// ============================================
+// INITIALIZATION
+// ============================================
+function init() {
+    console.log('Nexus Ultimate WebApp initializing...');
+    
+    // Init Telegram
+    initTelegram();
+    
+    // Apply upgrade effects
     applyUpgradeEffects();
     
-    // Energy regeneration
+    // Generate daily challenges
+    generateDailyChallenges();
+    
+    // Check streak
+    checkStreak();
+    
+    // Init canvas effects
+    const particleCanvas = document.getElementById('particleCanvas');
+    if (particleCanvas) {
+        particles = new ParticleSystem(particleCanvas);
+        particles.update();
+    }
+    
+    const meshCanvas = document.getElementById('meshGradient');
+    if (meshCanvas) {
+        meshGradient = new MeshGradient(meshCanvas);
+        meshGradient.animate();
+    }
+    
+    // Init spotlight
+    initSpotlight();
+    
+    // Init mystery drops
+    new MysteryDropSystem();
+    
+    // Init Visual Effects (High-End)
+    initVisualEffects();
+    
+    // Init cursor trail (only on desktop/large screens typically, but works on webapp too)
+    if (!('ontouchstart' in window) || window.innerWidth > 768) {
+        new CursorTrail();
+        new MagneticButtons();
+        new ParallaxEffect();
+    }
+    
+    // Render all
+    renderAll();
+    
+    // Init event listeners
+    initEventListeners();
+    
+    // Start intervals
+    setInterval(regenerateEnergy, CONFIG.ENERGY_REGEN_INTERVAL);
+    setInterval(autoTap, 1000);
+    setInterval(updateActiveEffects, 1000);
+    setInterval(() => state.saveState(), CONFIG.AUTO_SAVE_INTERVAL);
     setInterval(() => {
-        if (AppState.mining.energy < AppState.mining.maxEnergy) {
-            AppState.mining.energy = Math.min(AppState.mining.energy + CONFIG.ENERGY_REGEN_RATE, AppState.mining.maxEnergy);
-            updateUI();
-        }
-    }, 1000);
+        renderUpgrades();
+        renderPodium();
+    }, 5000);
     
-    // Auto tap
-    setInterval(() => {
-        if (AppState.mining.autoTapRate > 0 && AppState.mining.energy > 0) {
-            const reward = AppState.mining.autoTapRate * AppState.mining.multiplier;
-            AppState.mining.balance += reward;
-            AppState.mining.accumulatedCoins = (AppState.mining.accumulatedCoins || 0) + reward;
-            AppState.mining.energy = Math.max(0, AppState.mining.energy - 1);
-            updateUI();
-        }
-    }, 1000);
+    // Check maintenance mode
+    checkMaintenanceMode();
     
-    console.log('Mining initialized');
+    // Hide loader
+    setTimeout(() => {
+        document.getElementById('loader').classList.add('hidden');
+        document.getElementById('app').classList.add('visible');
+    }, 1500);
+    
+    console.log('Nexus Ultimate WebApp initialized!');
 }
 
-function initRecommendations() {
-    const carousel = document.getElementById('recommendationsCarousel');
-    if (!carousel || !AppState.recommendations) return;
+function checkMaintenanceMode() {
+    const isMaintenance = localStorage.getItem('nexus_maintenance') === 'true';
+    const toggle = document.getElementById('maintenanceToggle');
     
-    carousel.innerHTML = AppState.recommendations.map(rec => `
-        <div class="recommendation-card glass-card" onclick="navigateTo('${rec.id}')">
-            <div class="rec-badge">${rec.badge}</div>
-            <div class="rec-icon"><i class="fas ${rec.icon}"></i></div>
-            <div class="rec-content">
-                <h4>${rec.title}</h4>
-                <p>${rec.desc}</p>
-            </div>
-        </div>
-    `).join('');
-    
-    console.log('Recommendations initialized');
-}
+    if (toggle) {
+        toggle.checked = isMaintenance;
+        toggle.addEventListener('change', (e) => {
+            localStorage.setItem('nexus_maintenance', e.target.checked);
+            if (e.target.checked) {
+                showToast('Texnik xizmat rejimi yoqildi', 'warning');
+            } else {
+                showToast('Texnik xizmat rejimi o\'chirildi', 'success');
+            }
+        });
+    }
 
-function handleUrlParams() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const section = urlParams.get('section');
-    const ref = urlParams.get('ref') || urlParams.get('start');
-    
-    if (section) navigateTo(section);
-    if (ref) handleReferral(ref);
-    
-    console.log('URL params handled');
-}
-
-function showBattleLobby() {
-    const section = document.getElementById('sectionBattle');
-    if (!section) return;
-    
-    section.innerHTML = `
-        <div class="battle-lobby glass-card">
-            <div class="lobby-header">
-                <h2><i class="fas fa-bolt"></i> Battle Lobby</h2>
-                <div class="lobby-id">Room: ${AppState.battle.id || 'Loading...'}</div>
+    if (isMaintenance && !state.get('user').isAdmin) {
+        document.body.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#050505;color:white;text-align:center;padding:20px;">
+                <i class="fas fa-tools" style="font-size:64px;color:#ffd700;margin-bottom:20px;"></i>
+                <h1 style="margin-bottom:10px;font-family:'Outfit',sans-serif;">Texnik Xizmat</h1>
+                <p style="color:rgba(255,255,255,0.6);">Tizimda profilaktika ishlari olib borilmoqda.<br>Tez orada qaytamiz!</p>
             </div>
-            <div class="lobby-participants" id="lobbyParticipants">
-                <div class="participant-item">
-                    <div class="participant-avatar">${(AppState.user?.full_name || 'U')[0]}</div>
-                    <div class="participant-name">${AppState.user?.full_name || 'Siz'}</div>
-                    <div class="participant-status creator">Host</div>
-                </div>
-            </div>
-            <div class="lobby-actions">
-                ${AppState.battle.isCreator ? `<button class="start-quiz-btn" onclick="startBattleGame()"><i class="fas fa-play"></i> Boshlash</button>` : '<p>Host boshlashini kuting...</p>'}
-                <button class="btn-secondary" onclick="leaveBattle()"><i class="fas fa-sign-out-alt"></i> Chiqish</button>
-            </div>
-            <div class="lobby-share">
-                <p>Do'stlarni taklif qiling:</p>
-                <button onclick="shareBattleLink()"><i class="fas fa-share"></i> Ulashish</button>
-            </div>
-        </div>
-    `;
-}
-
-function showQuizResults() {
-    const questions = AppState.quiz.questions;
-    const score = AppState.quiz.score;
-    const total = questions.length;
-    const percentage = Math.round((score / total) * 100);
-    
-    const xpEarned = score * 10;
-    const goldEarned = score >= total ? 5 : 0;
-    
-    addXP(xpEarned, 'quiz');
-    if (goldEarned > 0) addGold(goldEarned, 'quiz_perfect');
-    
-    const section = document.getElementById('sectionQuiz');
-    section.innerHTML = `
-        <div class="quiz-results glass-card">
-            <div class="results-icon">${percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '📚'}</div>
-            <h2>Test yakunlandi!</h2>
-            <div class="results-score">
-                <div class="score-circle" style="background: conic-gradient(var(--accent-primary) ${percentage}%, transparent ${percentage}%);">
-                    <span>${percentage}%</span>
-                </div>
-            </div>
-            <div class="results-stats">
-                <div class="stat"><span class="stat-value">${score}</span><span class="stat-label">To'g'ri</span></div>
-                <div class="stat"><span class="stat-value">${total - score}</span><span class="stat-label">Noto'g'ri</span></div>
-                <div class="stat"><span class="stat-value">+${xpEarned}</span><span class="stat-label">XP</span></div>
-            </div>
-            <div class="results-actions">
-                <button class="start-quiz-btn" onclick="resetQuiz()"><i class="fas fa-redo"></i> Qayta urinish</button>
-                <button class="btn-secondary" onclick="navigateTo('home')"><i class="fas fa-home"></i> Bosh sahifa</button>
-            </div>
-        </div>
-    `;
-    
-    updateChallengeProgress('quiz', 1);
-}
-
-function resetQuiz() {
-    AppState.quiz.currentQuestion = 0;
-    AppState.quiz.score = 0;
-    AppState.quiz.answers = [];
-    renderQuizSetup();
-}
-
-function renderQuizSetup() {
-    const section = document.getElementById('sectionQuiz');
-    if (!section) return;
-    
-    section.innerHTML = `
-        <div class="quiz-setup glass-card">
-            <h2><i class="fas fa-brain"></i> AI Quiz</h2>
-            <div class="quiz-limit-info">
-                <span id="quizRemaining">${AppState.quiz.remaining}</span>/<span id="quizTotal">${AppState.quiz.total}</span> test qoldi
-            </div>
-            <div class="quiz-options">
-                <div class="option-group">
-                    <label>Mavzu</label>
-                    <select id="quizTopic" onchange="AppState.quiz.topic = this.value">
-                        <option value="general">Umumiy bilim</option>
-                        <option value="science">Fan</option>
-                        <option value="history">Tarix</option>
-                        <option value="it">IT</option>
-                    </select>
-                </div>
-                <div class="option-group">
-                    <label>Qiyinlik</label>
-                    <select id="quizDifficulty" onchange="AppState.quiz.difficulty = this.value">
-                        <option value="easy">Oson</option>
-                        <option value="medium">O'rta</option>
-                        <option value="hard">Qiyin</option>
-                    </select>
-                </div>
-                <div class="option-group">
-                    <label>Savollar soni</label>
-                    <select id="quizCount" onchange="AppState.quiz.count = parseInt(this.value)">
-                        <option value="5">5 ta</option>
-                        <option value="10">10 ta</option>
-                        <option value="15">15 ta</option>
-                    </select>
-                </div>
-            </div>
-            <button class="start-quiz-btn" onclick="startQuiz()"><i class="fas fa-play"></i> Testni boshlash</button>
-        </div>
-    `;
-}
-
-function leaveBattle() {
-    AppState.battle.active = false;
-    AppState.battle.id = null;
-    AppState.battle.isCreator = false;
-    navigateTo('home');
-    showToast('Battle', 'Battledan chiqdingiz', 'info');
-}
-
-function shareBattleLink() {
-    const link = `https://t.me/${CONFIG.BOT_USERNAME}?start=battle_${AppState.battle.id}`;
-    if (navigator.share) {
-        navigator.share({ title: 'Battle ga qo\'shiling!', url: link });
-    } else {
-        navigator.clipboard.writeText(link);
-        showToast('Nusxalandi', 'Havola nusxalandi!', 'success');
+        `;
     }
 }
 
-function renderLeaderboard() {
-    const container = document.getElementById('leaderboardList');
-    if (!container) return;
-    
-    // Mock leaderboard data
-    const mockData = [
-        { name: 'Ali', xp: 15000, level: 12 },
-        { name: 'Vali', xp: 12500, level: 10 },
-        { name: 'Sardi', xp: 10000, level: 9 },
-        { name: 'Jasur', xp: 8500, level: 8 },
-        { name: 'Nodira', xp: 7000, level: 7 }
-    ];
-    
-    const medals = ['🥇', '🥈', '🥉'];
-    
-    container.innerHTML = mockData.map((user, i) => `
-        <div class="leaderboard-item glass-card">
-            <div class="rank">${medals[i] || (i + 1)}</div>
-            <div class="user-info">
-                <div class="user-avatar">${user.name[0]}</div>
-                <div class="user-details">
-                    <div class="user-name">${user.name}</div>
-                    <div class="user-level">Level ${user.level}</div>
-                </div>
-            </div>
-            <div class="user-xp">${formatNumber(user.xp)} XP</div>
-        </div>
-    `).join('');
-}
+// Start app
+document.addEventListener('DOMContentLoaded', init);
