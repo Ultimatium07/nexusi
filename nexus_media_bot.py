@@ -35207,11 +35207,13 @@ async def main():
     dp.include_router(router)
     
     # Initialize database
-    db = DatabaseManager()
-    await db.init_database()
+    Config.setup_dirs()
+    db_path = os.path.join(Config.DATA_DIR, "nexus.db")
+    db = DatabaseManager(db_path)
+    await db.init_db()
     
     # Start background workers
-    asyncio.create_task(trial_expiry_checker(bot, db))
+    asyncio.create_task(trial_expiry_checker_worker(bot, db))
     asyncio.create_task(mining_farm_auto_collect_worker(bot, db))
     asyncio.create_task(leaderboard_reset_worker(bot, db))
     asyncio.create_task(supabase_payment_sync_worker(bot, db))
