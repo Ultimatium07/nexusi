@@ -249,20 +249,128 @@
                     <div class="active-effects" id="activeEffectsContainer"></div>
                 </div>
 
-                <!-- Upgrades Shop -->
+                <!-- Shop Section -->
                 <div class="quantum-shop">
                     <div class="shop-header">
-                        <h3>Quantum Upgrades</h3>
+                        <h3>Quantum Shop</h3>
                         <div class="shop-tabs">
-                            <button class="shop-tab active" data-shop="upgrades">Upgrades</button>
-                            <button class="shop-tab" data-shop="boosters">Boosters</button>
-                            <button class="shop-tab" data-shop="skins">Skins</button>
+                            <button class="shop-tab active" onclick="switchShopTab('upgrades')">Upgrades</button>
+                            <button class="shop-tab" onclick="switchShopTab('boosters')">Boosters</button>
                         </div>
                     </div>
-                    
                     <div class="shop-content">
-                        <div class="shop-grid" id="upgradesGrid">
-                            <!-- Upgrades will be generated dynamically -->
+                        <div id="upgradesGrid" class="shop-grid">
+                            <!-- Upgrades will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Battle System -->
+                <div class="quantum-battle">
+                    <div class="battle-header">
+                        <h3>Quantum Battle Arena</h3>
+                        <div class="battle-modes">
+                            <button class="battle-mode-btn" onclick="createBattleRoom('duel')">
+                                <i class="fas fa-swords"></i>
+                                <span>Duel</span>
+                            </button>
+                            <button class="battle-mode-btn" onclick="createBattleRoom('team')">
+                                <i class="fas fa-users"></i>
+                                <span>Team Battle</span>
+                            </button>
+                            <button class="battle-mode-btn" onclick="createBattleRoom('tournament')">
+                                <i class="fas fa-trophy"></i>
+                                <span>Tournament</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="activeBattles" class="active-battles">
+                        <!-- Active battles will be listed here -->
+                    </div>
+                </div>
+
+                <!-- Gamification Section -->
+                <div class="quantum-gamification">
+                    <div class="gamification-tabs">
+                        <button class="gam-tab active" onclick="switchGamTab('achievements')">Achievements</button>
+                        <button class="gam-tab" onclick="switchGamTab('leaderboard')">Leaderboard</button>
+                        <button class="gam-tab" onclick="switchGamTab('daily')">Daily Challenges</button>
+                    </div>
+                    <div class="gamification-content">
+                        <div id="achievementsTab" class="gam-tab-content active">
+                            <div id="achievementsGrid" class="achievements-grid">
+                                <!-- Achievements will be rendered here -->
+                            </div>
+                        </div>
+                        <div id="leaderboardTab" class="gam-tab-content">
+                            <div id="leaderboardList" class="leaderboard-list">
+                                <!-- Leaderboard will be rendered here -->
+                            </div>
+                        </div>
+                        <div id="dailyTab" class="gam-tab-content">
+                            <div id="dailyChallengesList" class="daily-challenges">
+                                <!-- Daily challenges will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wayground Section -->
+                <div class="quantum-wayground">
+                    <div class="wayground-header">
+                        <h3>Wayground - Study Hub</h3>
+                        <div class="create-room-actions">
+                            <button class="create-room-btn" onclick="createWaygroundRoom('study', 'Mathematics')">
+                                <i class="fas fa-calculator"></i>
+                                Create Study Room
+                            </button>
+                            <button class="create-room-btn" onclick="createWaygroundRoom('discussion', 'General Discussion')">
+                                <i class="fas fa-comments"></i>
+                                Start Discussion
+                            </button>
+                            <button class="create-room-btn" onclick="createWaygroundRoom('session', 'Live Session')">
+                                <i class="fas fa-video"></i>
+                                Schedule Session
+                            </button>
+                        </div>
+                    </div>
+                    <div id="waygroundRoomsList" class="wayground-rooms">
+                        <!-- Wayground rooms will be listed here -->
+                    </div>
+                </div>
+
+                <!-- File Analysis Section -->
+                <div class="quantum-file-analysis">
+                    <div class="file-upload-area">
+                        <input type="file" id="fileInput" accept=".txt,.pdf,.doc,.docx" onchange="handleFileUpload(event)">
+                        <label for="fileInput" class="file-upload-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Upload file for AI analysis</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- AI Chat Section -->
+                <div class="quantum-ai-chat">
+                    <button class="ai-chat-btn" onclick="openAIChat()">
+                        <i class="fas fa-robot"></i>
+                        <span>AI Assistant</span>
+                    </button>
+                </div>
+
+                <!-- Referral Section -->
+                <div class="quantum-referral">
+                    <div class="referral-card">
+                        <h4>Invite Friends & Earn Rewards!</h4>
+                        <p>Share your referral link and get 100 Gold + 500 XP for each friend!</p>
+                        <div class="referral-actions">
+                            <button class="referral-btn" onclick="copyReferralLink()">
+                                <i class="fas fa-copy"></i>
+                                Copy Referral Link
+                            </button>
+                            <div class="referral-stats">
+                                <span>Referrals: <strong id="referralCount">0</strong></span>
+                            </div>
                         </div>
                     </div>
                 </div>
