@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEXUS QUANTUM - Ultimate WebApp</title>
+    
+    <!-- External Libraries -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- GSAP Animation Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+    
+    <!-- Three.js for 3D Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="nexus-quantum.css">
+</head>
+<body>
+    <!-- Quantum Background Effects -->
+    <canvas id="quantumCanvas"></canvas>
+    <canvas id="meshGradient"></canvas>
+    <canvas id="particleCanvas"></canvas>
+    <div id="spotlight"></div>
+    <div class="noise-overlay"></div>
+    <div class="scanline"></div>
+    
+    <!-- Quantum Loader -->
+    <div id="quantumLoader">
+        <div class="loader-content">
+            <div class="quantum-orb">
+                <div class="orb-ring ring-1"></div>
+                <div class="orb-ring ring-2"></div>
+                <div class="orb-ring ring-3"></div>
+                <div class="orb-core">
+                    <div class="core-pulse"></div>
+                </div>
+            </div>
+            <div class="loader-text">NEXUS QUANTUM</div>
+            <div class="loader-subtitle">Initializing Quantum Core...</div>
+            <div class="loader-progress">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="loading-stages">
+                <div class="stage active" data-stage="core">Core Engine</div>
+                <div class="stage" data-stage="ai">AI Neural Network</div>
+                <div class="stage" data-stage="particles">Quantum Particles</div>
+                <div class="stage" data-stage="sync">Data Synchronization</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Quantum App -->
+    <div id="quantumApp">
+        <!-- Quantum Header -->
+        <header class="quantum-header">
+            <div class="header-left">
+                <div class="quantum-avatar" id="userAvatar">
+                    <div class="avatar-glow"></div>
+                    <div class="avatar-text">N</div>
+                    <div class="avatar-level">1</div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Quantum User</div>
+                    <div class="user-tier" id="userTier">
+                        <i class="fas fa-atom"></i>
+                        <span>Quantum Standard</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="quantum-stats">
+                    <div class="stat-item quantum">
+                        <div class="stat-icon">
+                            <i class="fas fa-bolt"></i>
+                            <div class="stat-pulse"></div>
+                        </div>
+                        <div class="stat-value" id="quantumXP">0</div>
+                        <div class="stat-label">XP</div>
+                    </div>
+                    <div class="stat-item gold">
+                        <div class="stat-icon">
+                            <i class="fas fa-coins"></i>
+                            <div class="stat-pulse gold"></div>
+                        </div>
+                        <div class="stat-value" id="quantumGold">0</div>
+                        <div class="stat-label">Gold</div>
+                    </div>
+                    <div class="stat-item energy">
+                        <div class="stat-icon">
+                            <i class="fas fa-battery-three-quarters"></i>
+                            <div class="stat-pulse energy"></div>
+                        </div>
+                        <div class="stat-value" id="quantumEnergy">100%</div>
+                        <div class="stat-label">Energy</div>
+                    </div>
+                </div>
+                <button class="quantum-settings-btn" id="settingsBtn">
+                    <i class="fas fa-cog"></i>
+                    <div class="settings-glow"></div>
+                </button>
+            </div>
+        </header>
+
+        <!-- Quantum Stats Bar -->
+        <div class="quantum-stats-bar">
+            <div class="stat-chip level">
+                <i class="fas fa-layer-group"></i>
+                <span id="statLevel">1</span>
+                <div class="chip-glow"></div>
+            </div>
+            <div class="stat-chip streak">
+                <i class="fas fa-fire"></i>
+                <span id="statStreak">0</span>
+                <div class="chip-glow"></div>
+            </div>
+            <div class="stat-chip referrals">
+                <i class="fas fa-users"></i>
+                <span id="statReferrals">0</span>
+                <div class="chip-glow"></div>
+            </div>
+            <div class="stat-chip dark-matter" id="darkMatterChip">
+                <i class="fas fa-atom"></i>
+                <span id="statDarkMatter">0</span>
+                <div class="chip-glow dark"></div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="quantum-nav">
+            <button class="nav-tab active" data-section="mining">
+                <i class="fas fa-bolt"></i>
+                <span>Mining</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="nav-tab" data-section="quiz">
+                <i class="fas fa-brain"></i>
+                <span>AI Quiz</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="nav-tab" data-section="battle">
+                <i class="fas fa-sword"></i>
+                <span>Battle</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="nav-tab" data-section="gamification">
+                <i class="fas fa-gamepad"></i>
+                <span>Gamification</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="nav-tab" data-section="wayground">
+                <i class="fas fa-users-cog"></i>
+                <span>Wayground</span>
+                <div class="tab-indicator"></div>
+            </button>
+        </div>
+
+        <!-- Sections Container -->
+        <div class="sections-container">
+            <!-- Mining Section -->
+            <section id="sectionMining" class="quantum-section active">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-bolt"></i>
+                        Quantum Mining
+                    </h2>
+                    <div class="section-subtitle">Har bir click - kvant energiyasi</div>
+                </div>
+
+                <!-- Quantum Mining Reactor -->
+                <div class="quantum-reactor">
+                    <div class="reactor-core">
+                        <div class="reactor-glow"></div>
+                        <div class="reactor-rings">
+                            <div class="reactor-ring ring-1"></div>
+                            <div class="reactor-ring ring-2"></div>
+                            <div class="reactor-ring ring-3"></div>
+                        </div>
+                        <div class="reactor-center">
+                            <div class="reactor-particle"></div>
+                            <div class="reactor-energy"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mining-stats">
+                        <div class="mining-balance">
+                            <div class="balance-label">Quantum Balance</div>
+                            <div class="balance-value" id="miningBalance">0</div>
+                            <div class="balance-change" id="balanceChange">+0</div>
+                        </div>
+                        
+                        <div class="mining-multipliers">
+                            <div class="multiplier-item">
+                                <i class="fas fa-hand-pointer"></i>
+                                <span id="tapPower">1</span>
+                                <div class="multiplier-label">Power</div>
+                            </div>
+                            <div class="multiplier-item">
+                                <i class="fas fa-robot"></i>
+                                <span id="autoTapRate">0</span>
+                                <div class="multiplier-label">Auto</div>
+                            </div>
+                            <div class="multiplier-item">
+                                <i class="fas fa-percentage"></i>
+                                <span id="critChance">5%</span>
+                                <div class="multiplier-label">Crit</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Energy System -->
+                    <div class="quantum-energy">
+                        <div class="energy-header">
+                            <span class="energy-label">Quantum Energy</span>
+                            <span class="energy-value" id="energyValue">1000/1000</span>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="energyFill"></div>
+                            <div class="energy-particles"></div>
+                        </div>
+                        <div class="energy-regen">
+                            <i class="fas fa-sync"></i>
+                            <span id="regenRate">+1/s</span>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Mining Claim -->
+                    <div class="auto-mining" id="autoMiningContainer" style="display: none;">
+                        <div class="auto-info">
+                            <div class="auto-label">Auto-Mining</div>
+                            <div class="auto-amount" id="autoAmount">0</div>
+                        </div>
+                        <button class="quantum-claim-btn" id="claimBtn">
+                            <i class="fas fa-gem"></i>
+                            Claim
+                        </button>
+                    </div>
+
+                    <!-- Active Effects -->
+                    <div class="active-effects" id="activeEffectsContainer"></div>
+                </div>
+
+                <!-- Upgrades Shop -->
+                <div class="quantum-shop">
+                    <div class="shop-header">
+                        <h3>Quantum Upgrades</h3>
+                        <div class="shop-tabs">
+                            <button class="shop-tab active" data-shop="upgrades">Upgrades</button>
+                            <button class="shop-tab" data-shop="boosters">Boosters</button>
+                            <button class="shop-tab" data-shop="skins">Skins</button>
+                        </div>
+                    </div>
+                    
+                    <div class="shop-content">
+                        <div class="shop-grid" id="upgradesGrid">
+                            <!-- Upgrades will be generated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Quiz Section -->
+            <section id="sectionQuiz" class="quantum-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-brain"></i>
+                        AI Quiz Pro
+                    </h2>
+                    <div class="section-subtitle">Sun'iy intellekt bilan bilim sinovi</div>
+                </div>
+
+                <!-- Quiz Configuration -->
+                <div class="quiz-config">
+                    <div class="config-group">
+                        <label class="config-label">Mavzu</label>
+                        <div class="topic-selector">
+                            <button class="topic-btn active" data-topic="general">Umumiy</button>
+                            <button class="topic-btn" data-topic="science">Fan</button>
+                            <button class="topic-btn" data-topic="tech">Texnologiya</button>
+                            <button class="topic-btn" data-topic="history">Tarix</button>
+                            <button class="topic-btn" data-topic="math">Matematika</button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label class="config-label">Qiyinlik</label>
+                        <div class="difficulty-selector">
+                            <button class="diff-btn active" data-difficulty="easy">Oson</button>
+                            <button class="diff-btn" data-difficulty="medium">O'rta</button>
+                            <button class="diff-btn" data-difficulty="hard">Qiyin</button>
+                            <button class="diff-btn" data-difficulty="expert">Ekspert</button>
+                        </div>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label class="config-label">Savollar soni</label>
+                        <div class="count-selector">
+                            <button class="count-btn" data-count="5">5</button>
+                            <button class="count-btn active" data-count="10">10</button>
+                            <button class="count-btn" data-count="15">15</button>
+                            <button class="count-btn" data-count="20">20</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quiz Start -->
+                <div class="quiz-start-container">
+                    <button class="quantum-start-quiz" id="startQuizBtn">
+                        <i class="fas fa-play"></i>
+                        AI Quizni Boshlash
+                    </button>
+                    <div class="quiz-info">
+                        <div class="info-item">
+                            <i class="fas fa-clock"></i>
+                            <span>~5 daqiqa</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-bolt"></i>
+                            <span>+50 XP</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-coins"></i>
+                            <span>+100 Gold</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quiz Active Area -->
+                <div class="quiz-active" id="quizActiveContainer" style="display: none;">
+                    <div class="quiz-progress">
+                        <div class="progress-text">
+                            <span id="currentQuestion">1</span> / <span id="totalQuestions">10</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="quizProgressFill"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="quiz-question">
+                        <div class="question-text" id="questionText">Savol yuklanmoqda...</div>
+                    </div>
+                    
+                    <div class="quiz-answers" id="quizAnswersContainer">
+                        <!-- Answers will be generated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Battle Section -->
+            <section id="sectionBattle" class="quantum-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-sword"></i>
+                        Quantum Battle
+                    </h2>
+                    <div class="section-subtitle">Real vaqtda bilim jangi</div>
+                </div>
+
+                <!-- Battle Lobby -->
+                <div class="battle-lobby">
+                    <div class="lobby-create">
+                        <button class="quantum-create-battle" id="createBattleBtn">
+                            <i class="fas fa-plus"></i>
+                            Yangi Battle Yaratish
+                        </button>
+                    </div>
+                    
+                    <div class="lobby-list">
+                        <div class="lobby-header">
+                            <h3>Active Battles</h3>
+                            <div class="battle-filter">
+                                <button class="filter-btn active" data-filter="all">Barchasi</button>
+                                <button class="filter-btn" data-filter="waiting">Kutayotgan</button>
+                                <button class="filter-btn" data-filter="active">Boshlangan</button>
+                            </div>
+                        </div>
+                        
+                        <div class="battles-list" id="battlesList">
+                            <!-- Battles will be loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gamification Section -->
+            <section id="sectionGamification" class="quantum-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-gamepad"></i>
+                        Quantum Gamification
+                    </h2>
+                    <div class="section-subtitle">Yutuqlar va reytinglar</div>
+                </div>
+
+                <!-- Level Progress -->
+                <div class="level-progress">
+                    <div class="level-info">
+                        <div class="level-current">
+                            <span class="level-number" id="currentLevel">1</span>
+                            <span class="level-name">Quantum Beginner</span>
+                        </div>
+                        <div class="level-next">
+                            <span class="level-number">2</span>
+                            <span class="level-name">Quantum Explorer</span>
+                        </div>
+                    </div>
+                    <div class="level-bar">
+                        <div class="level-fill" id="levelFill"></div>
+                        <div class="level-percentage" id="levelPercentage">0%</div>
+                    </div>
+                    <div class="xp-info">
+                        <span id="currentXP">0</span> / <span id="requiredXP">1000</span> XP
+                    </div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="achievements-section">
+                    <div class="achievements-header">
+                        <h3>Quantum Achievements</h3>
+                        <div class="achievement-stats">
+                            <div class="stat">
+                                <span id="unlockedCount">0</span>
+                                <span class="stat-label">Ochilgan</span>
+                            </div>
+                            <div class="stat">
+                                <span id="totalCount">50</span>
+                                <span class="stat-label">Jami</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="achievements-grid" id="achievementsGrid">
+                        <!-- Achievements will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Leaderboard -->
+                <div class="leaderboard-section">
+                    <div class="leaderboard-header">
+                        <h3>Quantum Leaderboard</h3>
+                        <div class="leaderboard-tabs">
+                            <button class="leaderboard-tab active" data-type="global">Global</button>
+                            <button class="leaderboard-tab" data-type="friends">Do'stlar</button>
+                            <button class="leaderboard-tab" data-type="weekly">Haftalik</button>
+                        </div>
+                    </div>
+                    
+                    <div class="leaderboard-list" id="leaderboardList">
+                        <!-- Leaderboard will be loaded dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Wayground Section -->
+            <section id="sectionWayground" class="quantum-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-users-cog"></i>
+                        Wayground
+                    </h2>
+                    <div class="section-subtitle">Guruh bilan birga o'rganing</div>
+                </div>
+
+                <!-- Wayground Features -->
+                <div class="wayground-features">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="feature-info">
+                            <h4>Study Groups</h4>
+                            <p>O'qish guruhlariga qo'shiling</p>
+                        </div>
+                        <button class="feature-btn">Browse Groups</button>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="feature-info">
+                            <h4>Live Discussions</h4>
+                            <p>Real vaqtda suhbatlar</p>
+                        </div>
+                        <button class="feature-btn">Join Chat</button>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                        <div class="feature-info">
+                            <h4>Scheduled Sessions</h4>
+                            <p>Rejalashtirilgan sessiyalar</p>
+                        </div>
+                        <button class="feature-btn">View Schedule</button>
+                    </div>
+                </div>
+
+                <!-- Active Rooms -->
+                <div class="active-rooms">
+                    <div class="rooms-header">
+                        <h3>Active Rooms</h3>
+                        <button class="create-room-btn">
+                            <i class="fas fa-plus"></i>
+                            Create Room
+                        </button>
+                    </div>
+                    
+                    <div class="rooms-list" id="roomsList">
+                        <!-- Rooms will be loaded dynamically -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Quantum Settings Modal -->
+    <div class="quantum-modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Quantum Settings</h3>
+                <button class="modal-close" id="closeSettingsBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-volume-up"></i>
+                            <span>Sound Effects</span>
+                        </div>
+                        <label class="quantum-toggle">
+                            <input type="checkbox" id="soundToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-mobile-alt"></i>
+                            <span>Haptic Feedback</span>
+                        </div>
+                        <label class="quantum-toggle">
+                            <input type="checkbox" id="hapticToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-palette"></i>
+                            <span>Quantum Effects</span>
+                        </div>
+                        <label class="quantum-toggle">
+                            <input type="checkbox" id="effectsToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-group">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-moon"></i>
+                            <span>Dark Mode</span>
+                        </div>
+                        <label class="quantum-toggle">
+                            <input type="checkbox" id="darkModeToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <i class="fas fa-bell"></i>
+                            <span>Notifications</span>
+                        </div>
+                        <label class="quantum-toggle">
+                            <input type="checkbox" id="notificationsToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="quantum-core.js"></script>
+    <script src="nexus-quantum.js"></script>
+</body>
+</html>

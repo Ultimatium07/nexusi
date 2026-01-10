@@ -1,0 +1,1263 @@
+/* ============================================
+   NEXUS QUANTUM - Ultimate CSS Styles
+   World's Most Beautiful WebApp Design
+   ============================================ */
+
+/* 🎨 QUANTUM DESIGN SYSTEM */
+:root {
+    /* Quantum Colors */
+    --quantum-primary: #00ffff;
+    --quantum-secondary: #ff00ff;
+    --quantum-accent: #ffff00;
+    --quantum-dark: #0a0a0f;
+    --quantum-darker: #050508;
+    --quantum-light: #1a1a2e;
+    --quantum-lighter: #2a2a3e;
+    
+    /* Energy Colors */
+    --energy-blue: #00d4ff;
+    --energy-purple: #8b5cf6;
+    --energy-pink: #ec4899;
+    --energy-green: #10b981;
+    --energy-orange: #f97316;
+    --energy-red: #ef4444;
+    
+    /* Gold System */
+    --gold-primary: #fbbf24;
+    --gold-secondary: #f59e0b;
+    --gold-glow: rgba(251, 191, 36, 0.5);
+    
+    /* Dark Matter */
+    --dark-matter: #4c1d95;
+    --dark-matter-glow: rgba(76, 29, 149, 0.6);
+    
+    /* Gradients */
+    --gradient-quantum: linear-gradient(135deg, #00ffff, #ff00ff, #ffff00);
+    --gradient-energy: linear-gradient(45deg, #00d4ff, #8b5cf6);
+    --gradient-dark: linear-gradient(180deg, #0a0a0f, #1a1a2e);
+    --gradient-gold: linear-gradient(135deg, #fbbf24, #f59e0b);
+    
+    /* Shadows */
+    --shadow-quantum: 0 0 30px rgba(0, 255, 255, 0.5);
+    --shadow-energy: 0 0 40px rgba(139, 92, 246, 0.6);
+    --shadow-gold: 0 0 50px rgba(251, 191, 36, 0.7);
+    --shadow-dark: 0 0 60px rgba(76, 29, 149, 0.8);
+    
+    /* Typography */
+    --font-primary: 'Inter', sans-serif;
+    --font-display: 'Orbitron', monospace;
+    --font-accent: 'Outfit', sans-serif;
+    
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+    
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
+    --radius-full: 50%;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    --transition-quantum: 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 🌌 Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+}
+
+body {
+    font-family: var(--font-primary);
+    background: var(--quantum-dark);
+    color: #ffffff;
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* 🎭 Quantum Background Effects */
+#quantumCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -3;
+    pointer-events: none;
+}
+
+#meshGradient {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+#particleCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+
+#spotlight {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+                        rgba(0, 255, 255, 0.1) 0%, 
+                        transparent 50%);
+    mix-blend-mode: screen;
+}
+
+.noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.03;
+    background-image: 
+        repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px);
+}
+
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--quantum-primary), transparent);
+    animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(100vh); }
+}
+
+/* 🚀 Quantum Loader */
+#quantumLoader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--quantum-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+#quantumLoader.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.loader-content {
+    text-align: center;
+    max-width: 400px;
+    padding: var(--space-2xl);
+}
+
+.quantum-orb {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--space-xl);
+}
+
+.orb-ring {
+    position: absolute;
+    border: 2px solid;
+    border-radius: var(--radius-full);
+    animation: orbRotate 2s linear infinite;
+}
+
+.orb-ring.ring-1 {
+    width: 100%;
+    height: 100%;
+    border-color: var(--quantum-primary);
+    animation-duration: 3s;
+    box-shadow: var(--shadow-quantum);
+}
+
+.orb-ring.ring-2 {
+    width: 80%;
+    height: 80%;
+    top: 10%;
+    left: 10%;
+    border-color: var(--quantum-secondary);
+    animation-duration: 2.5s;
+    animation-direction: reverse;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+}
+
+.orb-ring.ring-3 {
+    width: 60%;
+    height: 60%;
+    top: 20%;
+    left: 20%;
+    border-color: var(--quantum-accent);
+    animation-duration: 2s;
+    box-shadow: 0 0 15px rgba(255, 255, 0, 0.4);
+}
+
+@keyframes orbRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.orb-core {
+    position: absolute;
+    width: 40%;
+    height: 40%;
+    top: 30%;
+    left: 30%;
+    background: var(--gradient-quantum);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-quantum);
+}
+
+.core-pulse {
+    width: 50%;
+    height: 50%;
+    background: white;
+    border-radius: var(--radius-full);
+    animation: corePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes corePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+.loader-text {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    background: var(--gradient-quantum);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.loader-subtitle {
+    font-size: 0.9rem;
+    color: var(--quantum-primary);
+    margin-bottom: var(--space-lg);
+    opacity: 0.8;
+}
+
+.loader-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--space-lg);
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--gradient-quantum);
+    border-radius: var(--radius-full);
+    animation: progressFill 2s ease-in-out infinite;
+}
+
+@keyframes progressFill {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+}
+
+.loading-stages {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-xs);
+}
+
+.stage {
+    flex: 1;
+    padding: var(--space-xs);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stage.active {
+    background: rgba(0, 255, 255, 0.2);
+    color: var(--quantum-primary);
+    transform: scale(1.05);
+}
+
+/* 🎯 Main App Container */
+#quantumApp {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    opacity: 0;
+    animation: appFadeIn 1s ease 2s forwards;
+}
+
+@keyframes appFadeIn {
+    to { opacity: 1; }
+}
+
+/* 🌟 Quantum Header */
+.quantum-header {
+    background: linear-gradient(180deg, rgba(10, 10, 15, 0.9), rgba(26, 26, 46, 0.8));
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    padding: var(--space-md) var(--space-lg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.quantum-avatar {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    background: var(--gradient-energy);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    box-shadow: var(--shadow-energy);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quantum-avatar:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 50px rgba(139, 92, 246, 0.8);
+}
+
+.avatar-glow {
+    position: absolute;
+    inset: -3px;
+    background: var(--gradient-energy);
+    border-radius: var(--radius-full);
+    z-index: -1;
+    animation: avatarGlow 2s ease-in-out infinite;
+}
+
+@keyframes avatarGlow {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+
+.avatar-level {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: var(--gradient-gold);
+    color: var(--quantum-dark);
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: var(--radius-full);
+    min-width: 20px;
+    text-align: center;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: white;
+}
+
+.user-tier {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.8rem;
+    color: var(--quantum-primary);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.quantum-stats {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+}
+
+.stat-icon {
+    position: relative;
+    font-size: 1.2rem;
+    margin-bottom: var(--space-xs);
+}
+
+.stat-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: var(--radius-full);
+    animation: statPulse 2s ease-in-out infinite;
+}
+
+.stat-pulse:not(.gold):not(.energy) {
+    background: rgba(0, 255, 255, 0.3);
+}
+
+.stat-pulse.gold {
+    background: rgba(251, 191, 36, 0.3);
+}
+
+.stat-pulse.energy {
+    background: rgba(16, 185, 129, 0.3);
+}
+
+@keyframes statPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 0; }
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: white;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.quantum-settings-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quantum-settings-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: var(--quantum-primary);
+    transform: rotate(90deg);
+}
+
+.settings-glow {
+    position: absolute;
+    inset: -2px;
+    background: var(--gradient-quantum);
+    border-radius: var(--radius-full);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.quantum-settings-btn:hover .settings-glow {
+    opacity: 0.5;
+}
+
+/* 📊 Quantum Stats Bar */
+.quantum-stats-bar {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.quantum-stats-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.stat-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.stat-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.chip-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: var(--radius-full);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stat-chip:hover .chip-glow {
+    opacity: 0.5;
+}
+
+.chip-glow:not(.dark) {
+    background: var(--gradient-energy);
+}
+
+.chip-glow.dark {
+    background: var(--dark-matter-glow);
+}
+
+/* 🧭 Quantum Navigation */
+.quantum-nav {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-lg);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.quantum-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.nav-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.nav-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.nav-tab.active {
+    background: var(--gradient-energy);
+    border-color: var(--quantum-primary);
+    color: white;
+    box-shadow: var(--shadow-energy);
+}
+
+.nav-tab i {
+    font-size: 1.2rem;
+}
+
+.tab-indicator {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--quantum-primary);
+    border-radius: var(--radius-full);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nav-tab.active .tab-indicator {
+    opacity: 1;
+}
+
+/* 📱 Sections Container */
+.sections-container {
+    padding: var(--space-lg);
+    min-height: calc(100vh - 300px);
+}
+
+.quantum-section {
+    display: none;
+    animation: sectionFadeIn 0.5s ease;
+}
+
+.quantum-section.active {
+    display: block;
+}
+
+@keyframes sectionFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+}
+
+.section-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    background: var(--gradient-quantum);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+}
+
+.section-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ⚡ Quantum Mining Styles */
+.quantum-reactor {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(0, 255, 255, 0.1));
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-2xl);
+    margin-bottom: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.reactor-core {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto var(--space-xl);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.reactor-core:hover {
+    transform: scale(1.05);
+}
+
+.reactor-core:active {
+    transform: scale(0.95);
+}
+
+.reactor-glow {
+    position: absolute;
+    inset: -20px;
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.3), transparent);
+    border-radius: var(--radius-full);
+    animation: reactorGlow 3s ease-in-out infinite;
+}
+
+@keyframes reactorGlow {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+.reactor-rings {
+    position: absolute;
+    inset: 0;
+}
+
+.reactor-ring {
+    position: absolute;
+    border: 2px solid;
+    border-radius: var(--radius-full);
+    animation: reactorRingRotate 3s linear infinite;
+}
+
+.reactor-ring.ring-1 {
+    inset: 10%;
+    border-color: var(--quantum-primary);
+    animation-duration: 4s;
+}
+
+.reactor-ring.ring-2 {
+    inset: 20%;
+    border-color: var(--quantum-secondary);
+    animation-duration: 3s;
+    animation-direction: reverse;
+}
+
+.reactor-ring.ring-3 {
+    inset: 30%;
+    border-color: var(--quantum-accent);
+    animation-duration: 2s;
+}
+
+@keyframes reactorRingRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.reactor-center {
+    position: absolute;
+    inset: 40%;
+    background: var(--gradient-quantum);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-quantum);
+}
+
+.reactor-particle {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: var(--radius-full);
+    animation: reactorParticle 1s ease-in-out infinite;
+}
+
+@keyframes reactorParticle {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.5); opacity: 0.7; }
+}
+
+.reactor-energy {
+    position: absolute;
+    inset: -10px;
+    border: 1px solid var(--quantum-primary);
+    border-radius: var(--radius-full);
+    animation: reactorEnergy 2s ease-in-out infinite;
+}
+
+@keyframes reactorEnergy {
+    0%, 100% { transform: scale(1); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+.mining-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.mining-balance {
+    grid-column: span 2;
+    text-align: center;
+}
+
+.balance-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: var(--space-xs);
+}
+
+.balance-value {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-xs);
+}
+
+.balance-change {
+    font-size: 0.8rem;
+    color: var(--energy-green);
+    font-weight: 600;
+}
+
+.mining-multipliers {
+    display: flex;
+    justify-content: space-around;
+    gap: var(--space-md);
+}
+
+.multiplier-item {
+    text-align: center;
+    padding: var(--space-md);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.multiplier-item i {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--quantum-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.multiplier-item span {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: var(--space-xs);
+}
+
+.multiplier-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* 🔋 Quantum Energy System */
+.quantum-energy {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.energy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.energy-label {
+    font-size: 0.9rem;
+    color: var(--energy-green);
+}
+
+.energy-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: white;
+}
+
+.energy-bar {
+    position: relative;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: var(--space-sm);
+}
+
+.energy-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--energy-green), #34d399);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.energy-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.energy-particles::before,
+.energy-particles::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: var(--radius-full);
+    animation: energyParticle 2s linear infinite;
+}
+
+.energy-particles::before {
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.energy-particles::after {
+    left: 80%;
+    animation-delay: 1s;
+}
+
+@keyframes energyParticle {
+    0% { transform: translateY(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(-20px); opacity: 0; }
+}
+
+.energy-regen {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* 🎁 Auto-Mining */
+.auto-mining {
+    background: var(--gradient-gold);
+    border: 1px solid var(--gold-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.auto-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.auto-label {
+    font-size: 0.9rem;
+    color: var(--quantum-dark);
+    font-weight: 600;
+}
+
+.auto-amount {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--quantum-dark);
+}
+
+.quantum-claim-btn {
+    background: var(--quantum-dark);
+    color: var(--gold-primary);
+    border: none;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.quantum-claim-btn:hover {
+    background: rgba(10, 10, 15, 0.8);
+    transform: translateY(-2px);
+}
+
+/* 🛒 Quantum Shop */
+.quantum-shop {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-2xl);
+}
+
+.shop-header {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+}
+
+.shop-header h3 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-md);
+}
+
+.shop-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    justify-content: center;
+}
+
+.shop-tab {
+    padding: var(--space-sm) var(--space-lg);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.shop-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.shop-tab.active {
+    background: var(--gradient-gold);
+    border-color: var(--gold-primary);
+    color: var(--quantum-dark);
+}
+
+.shop-content {
+    min-height: 200px;
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-md);
+}
+
+/* 🎯 Responsive Design */
+@media (max-width: 768px) {
+    .quantum-header {
+        flex-direction: column;
+        gap: var(--space-md);
+        text-align: center;
+    }
+    
+    .quantum-stats {
+        width: 100%;
+        justify-content: space-around;
+    }
+    
+    .quantum-nav {
+        justify-content: center;
+    }
+    
+    .nav-tab {
+        min-width: 70px;
+        padding: var(--space-sm) var(--space-md);
+    }
+    
+    .nav-tab span {
+        font-size: 0.7rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .quantum-reactor {
+        padding: var(--space-lg);
+    }
+    
+    .reactor-core {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .mining-stats {
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+    }
+    
+    .mining-balance {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .quantum-header {
+        padding: var(--space-sm);
+    }
+    
+    .quantum-stats {
+        gap: var(--space-sm);
+    }
+    
+    .stat-item {
+        min-width: 50px;
+    }
+    
+    .stat-value {
+        font-size: 1rem;
+    }
+    
+    .quantum-nav {
+        padding: var(--space-sm);
+    }
+    
+    .nav-tab {
+        min-width: 60px;
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
+    .sections-container {
+        padding: var(--space-md);
+    }
+    
+    .quantum-reactor {
+        padding: var(--space-md);
+    }
+    
+    .reactor-core {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .balance-value {
+        font-size: 2rem;
+    }
+}
+
+/* 🎭 Utility Classes */
+.glow-quantum {
+    box-shadow: var(--shadow-quantum);
+}
+
+.glow-energy {
+    box-shadow: var(--shadow-energy);
+}
+
+.glow-gold {
+    box-shadow: var(--shadow-gold);
+}
+
+.glow-dark {
+    box-shadow: var(--shadow-dark);
+}
+
+.text-gradient-quantum {
+    background: var(--gradient-quantum);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.bg-glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bg-glass-dark {
+    background: rgba(10, 10, 15, 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 🎯 Animations */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+    50% { box-shadow: 0 0 40px rgba(0, 255, 255, 0.8); }
+}
+
+/* 🎯 Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--quantum-darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gradient-quantum);
+    border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--quantum-primary);
+}
+
+/* 🎯 Selection Styling */
+::selection {
+    background: var(--quantum-primary);
+    color: var(--quantum-dark);
+}
+
+::-moz-selection {
+    background: var(--quantum-primary);
+    color: var(--quantum-dark);
+}
