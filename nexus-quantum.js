@@ -884,30 +884,36 @@ class QuantumAI {
     }
 
     async generateQuiz(topic, difficulty, count) {
-        // Always use mock for now to ensure functionality
+        // Always use mock data for now (no API key needed)
+        console.log('🤖 Using mock quiz data for:', topic, difficulty, count);
         return this.generateMockQuiz(topic, difficulty, count);
         
+        // Real API call (when OPENAI_API_KEY is set in Vercel)
+        /*
         try {
-            const model = this.models.get('quiz');
-            const response = await fetch(model.endpoint, {
+            const response = await fetch('/api/ai-quiz', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({
-                    topic,
-                    difficulty,
-                    count,
-                    language: 'uz'
+                    topic: topic,
+                    difficulty: difficulty,
+                    count: count
                 })
             });
-
-            if (!response.ok) throw new Error('AI request failed');
             
-            const data = await response.json();
-            return data.success ? data.quiz : null;
+            if (response.ok) {
+                const data = await response.json();
+                return data.questions;
+            } else {
+                throw new Error('API request failed');
+            }
         } catch (error) {
-            console.error('Quiz generation error:', error);
+            console.log('API error, using mock data:', error);
             return this.generateMockQuiz(topic, difficulty, count);
         }
+        */
     }
 
     async analyzeText(text, action) {
