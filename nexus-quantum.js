@@ -3,11 +3,12 @@
    World's Most Advanced WebApp Logic
    ============================================ */
 
-// 🧠 QUANTUM APP STATE
+// 🧠 QUANTUM APP STATE (Enhanced with Nexus Bot features)
 const QuantumState = {
     user: {
         id: null,
         name: 'Quantum User',
+        username: '',
         avatar: 'N',
         level: 1,
         xp: 0,
@@ -17,7 +18,22 @@ const QuantumState = {
         tier: 'Quantum Standard',
         streak: 0,
         referrals: 0,
-        darkMatter: 0
+        darkMatter: 0,
+        isPremium: false,
+        isAdmin: false,
+        referralCode: null,
+        referredBy: null,
+        premiumExpires: null,
+        totalTaps: 0,
+        totalGoldEarned: 0,
+        prestigeLevel: 0,
+        gameCoins: 0,
+        rpgGold: 0,
+        accumulatedCoins: 0,
+        activeEffects: [],
+        ownedSkins: ['skin_default'],
+        currentSkin: 'skin_default',
+        offlineMode: false
     },
     
     mining: {
@@ -25,12 +41,14 @@ const QuantumState = {
         tapPower: 1,
         autoTapRate: 0,
         critChance: 5,
+        critMultiplier: 2,
         multiplier: 1,
         upgrades: {
-            tap: 1,
-            energy: 1,
-            auto: 0,
-            luck: 1
+            tapPower: 0,
+            autoTap: 0,
+            energy: 0,
+            crit: 0,
+            luck: 0
         },
         autoMining: {
             active: false,
@@ -47,7 +65,12 @@ const QuantumState = {
         current: 0,
         score: 0,
         answers: [],
-        questions: []
+        questions: [],
+        stats: {
+            total: 0,
+            correct: 0,
+            streak: 0
+        }
     },
     
     battle: {
@@ -61,7 +84,9 @@ const QuantumState = {
         achievements: [],
         leaderboard: [],
         weeklyRank: 0,
-        globalRank: 0
+        globalRank: 0,
+        dailyChallenges: [],
+        lastChallengeReset: null
     },
     
     wayground: {
@@ -75,14 +100,181 @@ const QuantumState = {
         haptic: true,
         effects: true,
         darkMode: false,
-        notifications: true
+        notifications: true,
+        theme: 'default'
     },
     
     ui: {
         currentSection: 'mining',
         loading: true,
         animations: true
+    },
+    
+    // Nexus Bot Advanced Features
+    shop: {
+        boosters: [],
+        skins: []
+    },
+    
+    notifications: [],
+    
+    // SRS Flashcards
+    flashcards: [],
+    
+    // Admin
+    maintenance: false
+};
+
+// ============================================
+// NEXUS BOT CONFIGURATION (Enhanced)
+// ============================================
+const CONFIG = {
+    ADMIN_IDS: [5895125141],
+    BOT_USERNAME: 'PolWay_bot',
+    SUPABASE_URL: 'https://slmynfgspupncsijhzpd.supabase.co',
+    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsbXluZmdzcHVwbmNzaWpoenBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3Nzk1MTEsImV4cCI6MjA4MzM1NTUxMX0.HY8ZiQkWMRRA0jVMutTorc5Cc2zt1x38dalot-A_gLI',
+    OPENAI_KEY: '', // Server-side usage only
+    ENERGY_REGEN_RATE: 1,
+    ENERGY_REGEN_INTERVAL: 1000,
+    AUTO_SAVE_INTERVAL: 30000,
+    PRESTIGE_THRESHOLD: 100000,
+    XP_PREMIUM_COST: 10000,
+    GOLD_PREMIUM_COST: 50000,
+    GOLD_PREMIUM_DAYS: 3,
+    REFERRAL_REWARD_XP: 500,
+    REFERRAL_INVITER_GOLD: 1000,
+    SUPPORT_USERNAME: 'iultimatium'
+};
+
+// ============================================
+// UPGRADES SYSTEM (Nexus Bot)
+// ============================================
+const UPGRADES = {
+    tapPower: {
+        name: 'Tap Power',
+        icon: 'fa-hand-pointer',
+        baseCost: 100,
+        costMultiplier: 1.5,
+        effect: (level) => level + 1,
+        description: 'Har bir tap uchun +1 coin'
+    },
+    autoTap: {
+        name: 'Auto Tap',
+        icon: 'fa-robot',
+        baseCost: 500,
+        costMultiplier: 1.8,
+        effect: (level) => level,
+        description: 'Sekundiga avtomatik tap'
+    },
+    energy: {
+        name: 'Energy',
+        icon: 'fa-battery-full',
+        baseCost: 200,
+        costMultiplier: 1.4,
+        effect: (level) => 1000 + level * 200,
+        description: 'Maksimal energiya +200'
+    },
+    crit: {
+        name: 'Critical',
+        icon: 'fa-bolt',
+        baseCost: 300,
+        costMultiplier: 1.6,
+        effect: (level) => 5 + level * 2,
+        description: 'Kritik urilish ehtimoli +2%'
+    },
+    luck: {
+        name: 'Luck',
+        icon: 'fa-clover',
+        baseCost: 400,
+        costMultiplier: 1.7,
+        effect: (level) => level * 0.5,
+        description: 'Bonus drop ehtimoli +0.5%'
     }
+};
+
+// ============================================
+// SHOP ITEMS (Nexus Bot)
+// ============================================
+const SHOP_ITEMS = {
+    boosters: [
+        { id: 'speed_boost', name: 'Speed Boost', icon: 'fa-bolt', cost: 2000, duration: 300, effect: 'autoTapRate', multiplier: 2, desc: '2x Auto Tap (5 daqiqa)' },
+        { id: 'luck_boost', name: 'Lucky Charm', icon: 'fa-clover', cost: 5000, duration: 300, effect: 'critChance', add: 20, desc: '+20% Crit Chance (5 daqiqa)' },
+        { id: 'energy_drink', name: 'Energy Drink', icon: 'fa-wine-bottle', cost: 1000, duration: 0, effect: 'energy', refill: true, desc: 'To\'liq energiya' }
+    ],
+    skins: [
+        { id: 'skin_default', name: 'Default Core', icon: 'fa-circle', cost: 0, desc: 'Oddiy reaktor' },
+        { id: 'skin_neon', name: 'Neon Core', icon: 'fa-sun', cost: 10000, desc: 'Neon rangli reaktor' },
+        { id: 'skin_gold', name: 'Golden Core', icon: 'fa-gem', cost: 50000, desc: 'Oltin reaktor' },
+        { id: 'skin_void', name: 'Void Core', icon: 'fa-ghost', cost: 100000, desc: 'Qora tuynuk stili' }
+    ]
+};
+
+// ============================================
+// ACHIEVEMENTS (Nexus Bot)
+// ============================================
+const ACHIEVEMENTS = [
+    { id: 'first_tap', name: 'Birinchi qadam', icon: 'fa-shoe-prints', condition: s => s.totalTaps >= 1 },
+    { id: 'tap_100', name: '100 ta tap', icon: 'fa-hand-pointer', condition: s => s.totalTaps >= 100 },
+    { id: 'tap_1000', name: '1000 ta tap', icon: 'fa-hands', condition: s => s.totalTaps >= 1000 },
+    { id: 'tap_10000', name: '10000 ta tap', icon: 'fa-fire', condition: s => s.totalTaps >= 10000 },
+    { id: 'gold_1000', name: '1000 coin', icon: 'fa-coins', condition: s => s.totalGoldEarned >= 1000 },
+    { id: 'gold_10000', name: '10000 coin', icon: 'fa-sack-dollar', condition: s => s.totalGoldEarned >= 10000 },
+    { id: 'gold_100000', name: '100000 coin', icon: 'fa-gem', condition: s => s.totalGoldEarned >= 100000 },
+    { id: 'level_5', name: '5-daraja', icon: 'fa-star', condition: s => s.level >= 5 },
+    { id: 'level_10', name: '10-daraja', icon: 'fa-crown', condition: s => s.level >= 10 },
+    { id: 'streak_3', name: '3 kunlik streak', icon: 'fa-fire', condition: s => s.streak >= 3 },
+    { id: 'streak_7', name: '7 kunlik streak', icon: 'fa-fire-flame-curved', condition: s => s.streak >= 7 },
+    { id: 'prestige_1', name: 'Birinchi Prestige', icon: 'fa-atom', condition: s => s.prestigeLevel >= 1 },
+    { id: 'quiz_10', name: '10 ta quiz', icon: 'fa-brain', condition: s => s.quiz.stats.total >= 10 },
+    { id: 'quiz_perfect', name: 'Mukammal quiz', icon: 'fa-trophy', condition: s => s.quiz.stats.streak >= 10 }
+];
+
+// ============================================
+// QUIZ QUESTIONS (Nexus Bot)
+// ============================================
+const QUIZ_QUESTIONS = {
+    general: [
+        { q: "O'zbekiston poytaxti qaysi shahar?", a: ["Toshkent", "Samarqand", "Buxoro", "Xiva"], c: 0 },
+        { q: "Quyosh sistemasida nechta sayyora bor?", a: ["7", "8", "9", "10"], c: 1 },
+        { q: "Eng katta okean qaysi?", a: ["Atlantika", "Tinch", "Hind", "Shimoliy Muz"], c: 1 },
+        { q: "DNA nimaning qisqartmasi?", a: ["Dezoksiribonuklein kislota", "Dinamik nuklein kislota", "Dioksid nuklein", "Dimetil nuklein"], c: 0 },
+        { q: "Birinchi kompyuter qachon yaratilgan?", a: ["1936", "1946", "1956", "1966"], c: 1 }
+    ],
+    science: [
+        { q: "Suvning kimyoviy formulasi?", a: ["H2O", "CO2", "NaCl", "O2"], c: 0 },
+        { q: "Yorug'lik tezligi qancha?", a: ["300,000 km/s", "150,000 km/s", "500,000 km/s", "100,000 km/s"], c: 0 },
+        { q: "Eng og'ir element qaysi?", a: ["Oltin", "Uran", "Osmiy", "Platina"], c: 2 },
+        { q: "Inson tanasida nechta suyak bor?", a: ["206", "186", "226", "256"], c: 0 },
+        { q: "Elektron qanday zaryadga ega?", a: ["Musbat", "Manfiy", "Neytral", "O'zgaruvchan"], c: 1 }
+    ],
+    history: [
+        { q: "Amir Temur qachon tug'ilgan?", a: ["1336", "1346", "1356", "1366"], c: 0 },
+        { q: "Birinchi jahon urushi qachon boshlangan?", a: ["1912", "1914", "1916", "1918"], c: 1 },
+        { q: "Buyuk Ipak yo'li qayerdan boshlanadi?", a: ["Rim", "Xitoy", "Hindiston", "Eron"], c: 1 },
+        { q: "O'zbekiston mustaqilligi qachon e'lon qilindi?", a: ["1990", "1991", "1992", "1993"], c: 1 },
+        { q: "Samarqand necha yoshda?", a: ["2500+", "1500+", "3500+", "1000+"], c: 0 }
+    ],
+    tech: [
+        { q: "HTML nimaning qisqartmasi?", a: ["HyperText Markup Language", "High Tech Modern Language", "Hyper Transfer Mode Link", "Home Tool Markup Language"], c: 0 },
+        { q: "JavaScript kim tomonidan yaratilgan?", a: ["Bill Gates", "Brendan Eich", "Mark Zuckerberg", "Linus Torvalds"], c: 1 },
+        { q: "Birinchi iPhone qachon chiqdi?", a: ["2005", "2006", "2007", "2008"], c: 2 },
+        { q: "Python dasturlash tili qachon yaratilgan?", a: ["1989", "1991", "1995", "2000"], c: 1 },
+        { q: "RAM nimaning qisqartmasi?", a: ["Random Access Memory", "Read Access Memory", "Rapid Access Module", "Real Active Memory"], c: 0 }
+    ],
+    math: [
+        { q: "Pi sonining qiymati taxminan necha?", a: ["3.14", "2.71", "1.41", "1.61"], c: 0 },
+        { q: "2^10 nechaga teng?", a: ["512", "1024", "2048", "256"], c: 1 },
+        { q: "Uchburchak ichki burchaklari yig'indisi?", a: ["180°", "360°", "90°", "270°"], c: 0 },
+        { q: "Fibonachchi ketma-ketligidagi 7-son?", a: ["8", "13", "21", "5"], c: 1 },
+        { q: "Kvadrat ildiz 144 nechaga teng?", a: ["11", "12", "13", "14"], c: 1 }
+    ],
+    language: [
+        { q: "'Hello' so'zi qaysi tilda?", a: ["Ingliz", "Fransuz", "Nemis", "Ispan"], c: 0 },
+        { q: "O'zbek alifbosida nechta harf bor?", a: ["29", "32", "33", "35"], c: 0 },
+        { q: "'Gracias' qaysi tilda 'rahmat'?", a: ["Italyan", "Fransuz", "Ispan", "Portugaliya"], c: 2 },
+        { q: "Dunyoda eng ko'p gaplashiladigan til?", a: ["Ingliz", "Xitoy", "Ispan", "Hindi"], c: 1 },
+        { q: "'Konnichiwa' qaysi tilda salomlashish?", a: ["Koreys", "Xitoy", "Yapon", "Vetnam"], c: 2 }
+    ]
 };
 
 // 🎯 QUANTUM UI MANAGER
@@ -1046,7 +1238,11 @@ class QuantumAI {
     }
 }
 
-// 🎯 QUANTUM APP INITIALIZER
+// ============================================
+// NEXUS QUANTUM APP INITIALIZATION (Enhanced with Nexus Bot)
+// ============================================
+
+// Enhanced QuantumApp with Nexus Bot integration
 const QuantumApp = {
     core: new QuantumCore(),
     ui: new QuantumUI(),
@@ -1054,6 +1250,8 @@ const QuantumApp = {
     ai: new QuantumAI(),
     
     init() {
+        console.log('🚀 Initializing Quantum App with Nexus Bot features...');
+        
         // Initialize all systems
         this.ui.init();
         this.mining.init();
@@ -1061,6 +1259,9 @@ const QuantumApp = {
         
         // Load saved data
         this.loadGameData();
+        
+        // Initialize Nexus Bot components
+        this.initNexusBot();
         
         // Start game loops
         this.startGameLoops();
@@ -1079,24 +1280,139 @@ const QuantumApp = {
                 loader.style.display = 'none';
             }
         }, 2000);
+        
+        console.log('✅ Quantum App with Nexus Bot Initialized');
+    },
+    
+    initNexusBot() {
+        // Initialize particle system
+        const particleCanvas = document.getElementById('particleCanvas');
+        if (particleCanvas) {
+            particles = new ParticleSystem(particleCanvas);
+            particles.update();
+        }
+        
+        // Initialize audio
+        audio.init();
+        
+        // Apply upgrade effects
+        applyUpgradeEffects();
+        
+        // Check achievements
+        checkAchievements();
+        
+        // Setup event listeners
+        this.setupNexusBotEvents();
+    },
+    
+    setupNexusBotEvents() {
+        // Reactor tap
+        const reactorCore = document.getElementById('reactorCore');
+        if (reactorCore) {
+            reactorCore.addEventListener('click', handleTap);
+            reactorCore.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleTap(e.touches[0]);
+            });
+        }
+        
+        // Claim button
+        const claimBtn = document.getElementById('claimBtn');
+        if (claimBtn) {
+            claimBtn.addEventListener('click', claimAutoTapEarnings);
+        }
+        
+        // Quiz buttons
+        const startQuizBtn = document.getElementById('startQuizBtn');
+        if (startQuizBtn) {
+            startQuizBtn.addEventListener('click', startQuiz);
+        }
+        
+        // Shop buttons
+        document.querySelectorAll('.upgrade-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const type = el.dataset.upgrade;
+                if (type) purchaseUpgrade(type);
+            });
+        });
+        
+        // Category cards
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.category-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+            });
+        });
+        
+        // Difficulty buttons
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+        
+        // Count buttons
+        document.querySelectorAll('.count-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
     },
     
     loadGameData() {
-        const savedUser = localStorage.getItem('quantumUser');
-        const savedMining = localStorage.getItem('quantumMining');
-        
-        if (savedUser) {
-            Object.assign(QuantumState.user, JSON.parse(savedUser));
+        // Load from localStorage
+        const saved = localStorage.getItem('quantumState');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                Object.assign(QuantumState, parsed);
+            } catch (e) {
+                console.error('Failed to load saved data:', e);
+            }
         }
         
-        if (savedMining) {
-            Object.assign(QuantumState.mining, JSON.parse(savedMining));
+        // Load from Nexus Bot state if available
+        if (window.state && window.state.state) {
+            const nexusState = window.state.state;
+            
+            // Map Nexus Bot state to Quantum State
+            QuantumState.user = {
+                ...QuantumState.user,
+                ...nexusState.user,
+                gameCoins: nexusState.gameCoins || 0,
+                totalTaps: nexusState.totalTaps || 0,
+                totalGoldEarned: nexusState.totalGoldEarned || 0,
+                prestigeLevel: nexusState.prestigeLevel || 0,
+                achievements: nexusState.achievements || [],
+                ownedSkins: nexusState.ownedSkins || ['skin_default'],
+                currentSkin: nexusState.currentSkin || 'skin_default',
+                activeEffects: nexusState.activeEffects || []
+            };
+            
+            QuantumState.mining = {
+                ...QuantumState.mining,
+                ...nexusState.mining
+            };
+            
+            QuantumState.quiz.stats = nexusState.quizStats || { total: 0, correct:0, streak: 0 };
+            QuantumState.gamification.achievements = nexusState.achievements || [];
         }
     },
     
     saveGameData() {
-        localStorage.setItem('quantumUser', JSON.stringify(QuantumState.user));
-        localStorage.setItem('quantumMining', JSON.stringify(QuantumState.mining));
+        localStorage.setItem('quantumState', JSON.stringify(QuantumState));
+        
+        // Also save to Nexus Bot state if available
+        if (window.state && window.state.update) {
+            window.state.update({
+                user: QuantumState.user,
+                mining: QuantumState.mining,
+                quizStats: QuantumState.quiz.stats,
+                achievements: QuantumState.gamification.achievements
+            });
+        }
     },
     
     startGameLoops() {
@@ -1109,6 +1425,11 @@ const QuantumApp = {
                 );
                 this.ui.updateEnergy(QuantumState.user.energy);
             }
+        }, 1000);
+        
+        // Auto-tap
+        setInterval(() => {
+            autoTap();
         }, 1000);
         
         // Auto-save
@@ -1319,6 +1640,755 @@ function switchGamTab(tab) {
     }
 }
 
+// ============================================
+// NEXUS BOT CORE FUNCTIONS (Enhanced)
+// ============================================
+
+// State Management
+class StateManager {
+    constructor() {
+        this.state = this.loadState();
+        this.subscribers = [];
+    }
+
+    getDefaultState() {
+        return {
+            user: { id: 0, name: 'Foydalanuvchi', username: '', isPremium: false, isAdmin: false, referralCode: null, referralsCount: 0, referredBy: null },
+            gold: 0,
+            xp: 0,
+            level: 1,
+            energy: 1000,
+            maxEnergy: 1000,
+            tapPower: 1,
+            autoTapRate: 0,
+            critChance: 5,
+            critMultiplier: 2,
+            streak: 0,
+            lastActive: null,
+            totalTaps: 0,
+            totalGoldEarned: 0,
+            prestigeLevel: 0,
+            darkMatter: 0,
+            upgrades: { tapPower: 0, autoTap: 0, energy: 0, crit: 0, luck: 0 },
+            achievements: [],
+            dailyChallenges: [],
+            lastChallengeReset: null,
+            quizStats: { total: 0, correct: 0, streak: 0 },
+            settings: { sound: true, haptic: true, theme: 'default' },
+            notifications: [],
+            gameCoins: 0,
+            rpgGold: 0,
+            accumulatedCoins: 0,
+            activeEffects: [],
+            ownedSkins: ['skin_default'],
+            currentSkin: 'skin_default',
+            offlineMode: false
+        };
+    }
+
+    loadState() {
+        try {
+            const saved = localStorage.getItem('nexus_state');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return { ...this.getDefaultState(), ...parsed };
+            }
+        } catch (e) {
+            console.error('State load error:', e);
+        }
+        return this.getDefaultState();
+    }
+
+    saveState() {
+        try {
+            localStorage.setItem('nexus_state', JSON.stringify(this.state));
+        } catch (e) {
+            console.error('State save error:', e);
+        }
+    }
+
+    get(key) {
+        return this.state[key];
+    }
+
+    set(key, value) {
+        this.state[key] = value;
+        this.notify();
+        this.saveState();
+    }
+
+    update(updates) {
+        Object.assign(this.state, updates);
+        this.notify();
+        this.saveState();
+    }
+
+    subscribe(fn) {
+        this.subscribers.push(fn);
+    }
+
+    notify() {
+        this.subscribers.forEach(fn => fn(this.state));
+    }
+}
+
+// Audio Engine (Nexus Bot)
+class AudioEngine {
+    constructor() {
+        this.ctx = null;
+        this.sounds = {};
+        const resumeAudio = () => {
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume().then(() => {
+                    console.log('AudioContext resumed successfully');
+                });
+            }
+            document.removeEventListener('click', resumeAudio);
+            document.removeEventListener('touchstart', resumeAudio);
+        };
+        document.addEventListener('click', resumeAudio);
+        document.addEventListener('touchstart', resumeAudio);
+    }
+
+    init() {
+        if (this.ctx) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.createSounds();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+
+    createSounds() {
+        this.sounds = {
+            tap: [
+                { type: 'sine', freq: 620, duration: 0.14, volume: 0.28, glide: [{ time: 0.08, freq: 520 }] },
+                { type: 'triangle', freq: 1240, duration: 0.08, volume: 0.15 }
+            ],
+            critical: [
+                { type: 'square', freq: 950, duration: 0.22, volume: 0.35, glide: [{ time: 0.1, freq: 1500 }] },
+                { noise: true, duration: 0.15, volume: 0.08, filter: { type: 'bandpass', frequency: 2400 } }
+            ],
+            upgrade: [
+                { type: 'sine', freq: 540, duration: 0.2, volume: 0.25, glide: [{ time: 0.15, freq: 780 }] },
+                { type: 'triangle', freq: 1080, duration: 0.18, volume: 0.18 }
+            ],
+            levelUp: [
+                { type: 'sine', freq: 523, duration: 0.15, volume: 0.3, glide: [{ time: 0.1, freq: 659 }] },
+                { type: 'sine', freq: 784, duration: 0.25, volume: 0.22 },
+                { noise: true, duration: 0.12, volume: 0.05, filter: { type: 'highpass', frequency: 1800 } }
+            ],
+            achievement: [
+                { type: 'triangle', freq: 784, duration: 0.18, volume: 0.25 },
+                { type: 'triangle', freq: 988, duration: 0.2, volume: 0.22 },
+                { type: 'triangle', freq: 1175, duration: 0.22, volume: 0.2 }
+            ],
+            error: [
+                { type: 'sawtooth', freq: 260, duration: 0.25, volume: 0.2, glide: [{ time: 0.2, freq: 120 }] },
+                { noise: true, duration: 0.2, volume: 0.07, filter: { type: 'lowpass', frequency: 600 } }
+            ]
+        };
+    }
+
+    play(name) {
+        if (!QuantumState.settings.sound) return;
+        if (!this.ctx) this.init();
+        if (!this.ctx) return;
+
+        const soundDef = this.sounds[name];
+        if (!soundDef) return;
+
+        const tones = Array.isArray(soundDef) ? soundDef : [soundDef];
+        tones.forEach(tone => this.playTone(tone));
+    }
+
+    playTone(tone) {
+        const now = this.ctx.currentTime;
+        const gain = this.ctx.createGain();
+        const duration = tone.duration || 0.2;
+        let source;
+
+        if (tone.noise) {
+            const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            source = this.ctx.createBufferSource();
+            source.buffer = buffer;
+        } else {
+            source = this.ctx.createOscillator();
+            source.type = tone.type || 'sine';
+            source.frequency.setValueAtTime(tone.freq || 440, now);
+            if (tone.glide) {
+                tone.glide.forEach(({ time, freq }) => {
+                    source.frequency.linearRampToValueAtTime(freq, now + time);
+                });
+            }
+        }
+
+        let chain = source;
+
+        if (tone.filter) {
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = tone.filter.type;
+            filter.frequency.value = tone.filter.frequency;
+            chain.connect(filter);
+            chain = filter;
+        }
+
+        chain.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        const volume = tone.volume ?? 0.25;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(volume, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        source.start(now);
+        source.stop(now + duration);
+    }
+}
+
+// Particle System (Nexus Bot)
+class ParticleSystem {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    emit(x, y, count = 10, color = '#ffd700') {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8 - 3,
+                life: 1,
+                decay: 0.02 + Math.random() * 0.02,
+                size: 3 + Math.random() * 4,
+                color
+            });
+        }
+    }
+
+    update() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.particles = this.particles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.2;
+            p.life -= p.decay;
+            
+            if (p.life <= 0) return false;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+            this.ctx.fillStyle = p.color;
+            this.ctx.globalAlpha = p.life;
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+            
+            return true;
+        });
+        
+        requestAnimationFrame(() => this.update());
+    }
+}
+
+// Initialize Nexus Bot components
+const state = new StateManager();
+const audio = new AudioEngine();
+let particles = null;
+
+// Utility Functions
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function haptic(type = 'light') {
+    if (!QuantumState.settings.haptic || !window.Telegram?.WebApp?.HapticFeedback) return;
+    
+    switch(type) {
+        case 'light': window.Telegram.WebApp.HapticFeedback.impactOccurred('light'); break;
+        case 'medium': window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); break;
+        case 'heavy': window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); break;
+        case 'success': window.Telegram.WebApp.HapticFeedback.notificationOccurred('success'); break;
+        case 'error': window.Telegram.WebApp.HapticFeedback.notificationOccurred('error'); break;
+    }
+}
+
+// ============================================
+// NEXUS BOT ADVANCED FUNCTIONS
+// ============================================
+
+// Mining Functions (Enhanced)
+function handleTap(e) {
+    const energy = QuantumState.user.energy;
+    if (energy <= 0) {
+        showToast('Energiya tugadi!', 'warning');
+        haptic('error');
+        return;
+    }
+    
+    audio.init();
+    
+    const isCritical = Math.random() * 100 < QuantumState.mining.critChance;
+    const baseGold = QuantumState.mining.tapPower;
+    const goldEarned = isCritical ? baseGold * QuantumState.mining.critMultiplier : baseGold;
+    const xpEarned = isCritical ? 2 : 1;
+    
+    // Update Quantum State
+    QuantumState.user.gameCoins = (QuantumState.user.gameCoins || 0) + goldEarned;
+    QuantumState.user.xp += xpEarned;
+    QuantumState.user.energy = energy - 1;
+    QuantumState.user.totalTaps = (QuantumState.user.totalTaps || 0) + 1;
+    QuantumState.user.totalGoldEarned = (QuantumState.user.totalGoldEarned || 0) + goldEarned;
+    
+    // Visual feedback
+    const rect = e.target.getBoundingClientRect();
+    const x = e.clientX || (rect.left + rect.width / 2);
+    const y = e.clientY || (rect.top + rect.height / 2);
+    
+    showClickEffect(x, y, goldEarned, isCritical);
+    
+    if (particles) {
+        particles.emit(x, y, isCritical ? 20 : 8, isCritical ? '#ff006e' : '#ffd700');
+    }
+    
+    if (isCritical) {
+        document.getElementById('reactorCore').classList.add('critical');
+        setTimeout(() => document.getElementById('reactorCore').classList.remove('critical'), 300);
+        audio.play('critical');
+        haptic('heavy');
+    } else {
+        audio.play('tap');
+        haptic('light');
+    }
+    
+    checkAchievements();
+    checkLevelUp();
+    updateUI();
+}
+
+function showClickEffect(x, y, amount, isCritical) {
+    const el = document.createElement('div');
+    el.className = 'click-effect';
+    el.textContent = `+${amount}`;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    if (isCritical) {
+        el.style.color = '#ff006e';
+        el.style.fontSize = '28px';
+    }
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
+function checkLevelUp() {
+    const xp = QuantumState.user.xp;
+    const level = QuantumState.user.level;
+    const xpNeeded = level * 1000;
+    
+    if (xp >= xpNeeded) {
+        QuantumState.user.level = level + 1;
+        QuantumState.user.xp = xp - xpNeeded;
+        showToast(`🎉 ${level + 1}-darajaga ko'tarildingiz!`, 'success');
+        haptic('success');
+        audio.play('levelUp');
+        checkAchievements();
+    }
+}
+
+function checkAchievements() {
+    const unlocked = QuantumState.gamification.achievements || [];
+    const stateData = {
+        totalTaps: QuantumState.user.totalTaps,
+        totalGoldEarned: QuantumState.user.totalGoldEarned,
+        level: QuantumState.user.level,
+        streak: QuantumState.user.streak,
+        prestigeLevel: QuantumState.user.prestigeLevel,
+        quizStats: QuantumState.quiz.stats
+    };
+    
+    ACHIEVEMENTS.forEach(ach => {
+        if (!unlocked.includes(ach.id) && ach.condition(stateData)) {
+            unlocked.push(ach.id);
+            QuantumState.gamification.achievements = unlocked;
+            showToast(`🏆 Yutuq: ${ach.name}`, 'success');
+            haptic('success');
+            audio.play('achievement');
+        }
+    });
+}
+
+function regenerateEnergy() {
+    const energy = QuantumState.user.energy;
+    const maxEnergy = QuantumState.user.maxEnergy;
+    
+    if (energy < maxEnergy) {
+        QuantumState.user.energy = Math.min(energy + CONFIG.ENERGY_REGEN_RATE, maxEnergy);
+        updateEnergyBar();
+    }
+}
+
+function autoTap() {
+    const rate = QuantumState.mining.autoTapRate;
+    if (rate <= 0) return;
+    
+    const energy = QuantumState.user.energy;
+    if (energy <= 0) return;
+    
+    const goldEarned = rate;
+    
+    QuantumState.user.accumulatedCoins = (QuantumState.user.accumulatedCoins || 0) + goldEarned;
+    QuantumState.user.energy = energy - 1;
+    QuantumState.user.totalGoldEarned = (QuantumState.user.totalGoldEarned || 0) + goldEarned;
+    
+    updateUI();
+}
+
+function claimAutoTapEarnings() {
+    const accumulated = QuantumState.user.accumulatedCoins || 0;
+    if (accumulated <= 0) return;
+    
+    QuantumState.user.gameCoins = (QuantumState.user.gameCoins || 0) + accumulated;
+    QuantumState.user.accumulatedCoins = 0;
+    
+    showToast(`+${formatNumber(accumulated)} coin olindi!`, 'success');
+    haptic('success');
+    audio.play('achievement');
+    updateUI();
+}
+
+function updateEnergyBar() {
+    const energy = QuantumState.user.energy;
+    const maxEnergy = QuantumState.user.maxEnergy;
+    const percent = (energy / maxEnergy) * 100;
+    
+    const fill = document.getElementById('energyFill');
+    if (fill) {
+        fill.style.width = `${percent}%`;
+        fill.classList.toggle('low', percent < 20);
+    }
+    
+    const energyText = document.getElementById('energyText');
+    if (energyText) {
+        energyText.textContent = `${energy}/${maxEnergy}`;
+    }
+}
+
+function updateUI() {
+    // Update header
+    const userName = document.getElementById('userName');
+    if (userName) userName.textContent = QuantumState.user.name;
+    
+    const userAvatar = document.getElementById('userAvatar');
+    if (userAvatar) userAvatar.textContent = QuantumState.user.name.charAt(0).toUpperCase();
+    
+    // Update stats
+    const miningBalance = document.getElementById('miningBalance');
+    if (miningBalance) miningBalance.textContent = formatNumber(QuantumState.user.gameCoins || 0);
+    
+    const xpValue = document.getElementById('quantumXP');
+    if (xpValue) xpValue.textContent = formatNumber(QuantumState.user.xp);
+    
+    const goldValue = document.getElementById('quantumGold');
+    if (goldValue) goldValue.textContent = formatNumber(QuantumState.user.gold);
+    
+    const statLevel = document.getElementById('statLevel');
+    if (statLevel) statLevel.textContent = QuantumState.user.level;
+    
+    // Update energy
+    updateEnergyBar();
+    
+    // Update claim button
+    const claimContainer = document.getElementById('claimContainer');
+    const claimAmount = document.getElementById('claimAmount');
+    if (claimContainer && claimAmount) {
+        if (QuantumState.user.accumulatedCoins > 0) {
+            claimContainer.style.display = 'flex';
+            claimAmount.textContent = formatNumber(QuantumState.user.accumulatedCoins);
+        } else {
+            claimContainer.style.display = 'none';
+        }
+    }
+}
+
+// Shop Functions (Enhanced)
+function getUpgradeCost(type) {
+    const upgrade = UPGRADES[type];
+    const level = QuantumState.mining.upgrades[type] || 0;
+    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
+}
+
+function purchaseUpgrade(type) {
+    const cost = getUpgradeCost(type);
+    const gameCoins = QuantumState.user.gameCoins || 0;
+    
+    if (gameCoins < cost) {
+        showToast('Yetarli coin yo\'q!', 'error');
+        haptic('error');
+        audio.play('error');
+        return false;
+    }
+    
+    QuantumState.mining.upgrades[type] = (QuantumState.mining.upgrades[type] || 0) + 1;
+    QuantumState.user.gameCoins = gameCoins - cost;
+    
+    applyUpgradeEffects();
+    showToast(`${UPGRADES[type].name} yangilandi!`, 'success');
+    haptic('success');
+    audio.play('levelUp');
+    renderShop();
+    updateUI();
+    
+    return true;
+}
+
+function applyUpgradeEffects() {
+    const upgrades = QuantumState.mining.upgrades;
+    QuantumState.mining.tapPower = UPGRADES.tapPower.effect(upgrades.tapPower);
+    QuantumState.mining.autoTapRate = UPGRADES.autoTap.effect(upgrades.autoTap);
+    QuantumState.user.maxEnergy = UPGRADES.energy.effect(upgrades.energy);
+    QuantumState.mining.critChance = UPGRADES.crit.effect(upgrades.crit);
+}
+
+function buyShopItem(id, type) {
+    const gameCoins = QuantumState.user.gameCoins || 0;
+    let item;
+    
+    if (type === 'booster') {
+        item = SHOP_ITEMS.boosters.find(i => i.id === id);
+    } else {
+        item = SHOP_ITEMS.skins.find(i => i.id === id);
+    }
+    
+    if (!item) return;
+    
+    if (gameCoins < item.cost) {
+        showToast('Coin yetarli emas!', 'error');
+        return;
+    }
+    
+    // Purchase logic
+    if (type === 'skin') {
+        const ownedSkins = QuantumState.user.ownedSkins || ['skin_default'];
+        if (ownedSkins.includes(id)) {
+            // Equip
+            QuantumState.user.currentSkin = id;
+            showToast(`${item.name} o'rnatildi!`, 'success');
+        } else {
+            QuantumState.user.gameCoins = gameCoins - item.cost;
+            QuantumState.user.ownedSkins = [...ownedSkins, id];
+            QuantumState.user.currentSkin = id;
+            showToast(`${item.name} sotib olindi!`, 'success');
+        }
+    } else {
+        // Booster
+        if (item.refill) {
+            QuantumState.user.gameCoins = gameCoins - item.cost;
+            QuantumState.user.energy = QuantumState.user.maxEnergy;
+            showToast('Energiya to\'ldirildi!', 'success');
+        } else {
+            const effects = QuantumState.user.activeEffects || [];
+            const existing = effects.find(e => e.id === id);
+            
+            let newEffects;
+            const now = Date.now();
+            
+            if (existing) {
+                newEffects = effects.map(e => e.id === id ? { ...e, endTime: e.endTime + item.duration * 1000 } : e);
+            } else {
+                newEffects = [...effects, { id, endTime: now + item.duration * 1000 }];
+            }
+            
+            QuantumState.user.gameCoins = gameCoins - item.cost;
+            QuantumState.user.activeEffects = newEffects;
+            showToast(`${item.name} faollashdi!`, 'success');
+        }
+    }
+    
+    haptic('success');
+    audio.play('upgrade');
+    renderShop();
+    updateUI();
+}
+
+function getEffectiveStat(stat) {
+    let value = stat === 'autoTapRate' ? QuantumState.mining.autoTapRate : 
+                stat === 'critChance' ? QuantumState.mining.critChance :
+                stat === 'energy' ? QuantumState.user.energy : 0;
+    
+    const effects = QuantumState.user.activeEffects || [];
+    
+    effects.forEach(eff => {
+        const item = SHOP_ITEMS.boosters.find(i => i.id === eff.id);
+        if (item && item.effect === stat) {
+            if (item.multiplier) value *= item.multiplier;
+            if (item.add) value += item.add;
+        }
+    });
+    return value;
+}
+
+// Quiz Functions (Enhanced)
+function startQuiz(options = null) {
+    let category, difficulty, count;
+    
+    if (options) {
+        category = options.category || 'general';
+        difficulty = options.difficulty || 'medium';
+        count = options.questionCount || 10;
+    } else {
+        category = document.querySelector('.category-card.active')?.dataset.category || 'general';
+        difficulty = document.querySelector('.diff-btn.active')?.dataset.diff || 'medium';
+        count = parseInt(document.querySelector('.count-btn.active')?.dataset.count || '10');
+    }
+    
+    let questions;
+    if (category === 'mixed' || difficulty === 'adaptive') {
+        questions = [
+            ...QUIZ_QUESTIONS.general,
+            ...QUIZ_QUESTIONS.science,
+            ...QUIZ_QUESTIONS.history,
+            ...QUIZ_QUESTIONS.tech,
+            ...QUIZ_QUESTIONS.math,
+            ...QUIZ_QUESTIONS.language
+        ];
+    } else {
+        questions = [...(QUIZ_QUESTIONS[category] || QUIZ_QUESTIONS.general)];
+    }
+    
+    // Shuffle questions
+    questions.sort(() => Math.random() - 0.5);
+    
+    QuantumState.quiz = {
+        active: true,
+        category,
+        difficulty,
+        count: Math.min(count, questions.length),
+        questions: questions.slice(0, Math.min(count, questions.length)),
+        current: 0,
+        score: 0
+    };
+    
+    // Show quiz interface
+    document.querySelector('.quiz-container').style.display = 'none';
+    document.getElementById('quizGame').style.display = 'block';
+    document.getElementById('quizResults').style.display = 'none';
+    
+    showQuestion();
+    haptic('medium');
+}
+
+function showQuestion() {
+    const q = QuantumState.quiz.questions[QuantumState.quiz.current];
+    if (!q) return endQuiz();
+    
+    document.getElementById('quizProgress').textContent = `${QuantumState.quiz.current + 1}/${QuantumState.quiz.count}`;
+    document.getElementById('quizQuestion').textContent = q.q;
+    
+    const answersEl = document.getElementById('quizAnswers');
+    answersEl.innerHTML = q.a.map((a, i) => `
+        <div class="quiz-answer" data-index="${i}">${a}</div>
+    `).join('');
+    
+    answersEl.querySelectorAll('.quiz-answer').forEach(el => {
+        el.addEventListener('click', () => selectAnswer(parseInt(el.dataset.index)));
+    });
+}
+
+function selectAnswer(index) {
+    if (QuantumState.quiz.answered) return;
+    QuantumState.quiz.answered = true;
+    
+    const q = QuantumState.quiz.questions[QuantumState.quiz.current];
+    const answers = document.querySelectorAll('.quiz-answer');
+    
+    answers[q.c].classList.add('correct');
+    
+    if (index === q.c) {
+        QuantumState.quiz.score++;
+        haptic('success');
+        audio.play('tap');
+    } else {
+        if (index >= 0 && answers[index]) {
+            answers[index].classList.add('wrong');
+        }
+        haptic('error');
+        audio.play('error');
+    }
+    
+    setTimeout(() => {
+        QuantumState.quiz.current++;
+        QuantumState.quiz.answered = false;
+        
+        if (QuantumState.quiz.current < QuantumState.quiz.count) {
+            showQuestion();
+        } else {
+            endQuiz();
+        }
+    }, 1500);
+}
+
+function endQuiz() {
+    const accuracy = Math.round((QuantumState.quiz.score / QuantumState.quiz.count) * 100);
+    const xpEarned = QuantumState.quiz.score * 50;
+    
+    document.getElementById('quizGame').style.display = 'none';
+    document.getElementById('quizResults').style.display = 'block';
+    
+    document.getElementById('resultsScore').textContent = `${QuantumState.quiz.score}/${QuantumState.quiz.count}`;
+    document.getElementById('resultsAccuracy').textContent = `${accuracy}% aniqlik`;
+    document.getElementById('resultsXP').textContent = `+${xpEarned} XP`;
+    
+    // Update stats
+    QuantumState.user.xp += xpEarned;
+    QuantumState.quiz.stats.total += 1;
+    QuantumState.quiz.stats.correct += QuantumState.quiz.score;
+    QuantumState.quiz.stats.streak = accuracy === 100 ? QuantumState.quiz.stats.streak + 1 : 0;
+    
+    checkAchievements();
+    checkLevelUp();
+    updateUI();
+    
+    haptic('success');
+    audio.play('achievement');
+}
+
+function closeQuiz() {
+    document.getElementById('quizGame').style.display = 'none';
+    document.getElementById('quizResults').style.display = 'none';
+    document.querySelector('.quiz-container').style.display = 'block';
+    QuantumState.quiz.active = false;
+}
+
 // Modal Functions
 function closeWaygroundRoom() {
     document.getElementById('waygroundRoomModal').classList.remove('active');
@@ -1332,51 +2402,29 @@ function closeAIChat() {
     document.getElementById('aiChatModal').classList.remove('active');
 }
 
-// Quiz topic/difficulty/count selectors
-document.addEventListener('DOMContentLoaded', () => {
-    // Topic buttons
-    document.querySelectorAll('.topic-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-    
-    // Difficulty buttons
-    document.querySelectorAll('.diff-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-    
-    // Count buttons
-    document.querySelectorAll('.count-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-    
-    // Start quiz button
-    const startQuizBtn = document.getElementById('startQuizBtn');
-    if (startQuizBtn) {
-        startQuizBtn.addEventListener('click', startQuiz);
-    }
-    
-    // Claim auto mining button
-    const claimBtn = document.getElementById('claimBtn');
-    if (claimBtn) {
-        claimBtn.addEventListener('click', () => {
-            QuantumMining.claimAutoMining();
-        });
-    }
-    
-    // Initialize shop
-    renderShop();
-});
+// 🎯 Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => QuantumApp.init());
+} else {
+    QuantumApp.init();
+}
 
-// Make functions globally available
+// 🌍 Global functions for HTML onclick handlers
+window.QuantumMining = new QuantumMining();
+window.QuantumAI = new QuantumAI();
+
+// Make Nexus Bot functions globally available
+window.handleTap = handleTap;
+window.startQuiz = startQuiz;
+window.closeQuiz = closeQuiz;
+window.purchaseUpgrade = purchaseUpgrade;
+window.buyShopItem = buyShopItem;
+window.claimAutoTapEarnings = claimAutoTapEarnings;
+window.selectAnswer = selectAnswer;
+window.showToast = showToast;
+window.haptic = haptic;
+
+// Make additional functions globally available
 window.startQuiz = startQuiz;
 window.selectQuizAnswer = selectQuizAnswer;
 window.resetQuiz = resetQuiz;
@@ -1385,6 +2433,11 @@ window.switchGamTab = switchGamTab;
 window.closeWaygroundRoom = closeWaygroundRoom;
 window.closeFileAnalysis = closeFileAnalysis;
 window.closeAIChat = closeAIChat;
+window.renderShop = renderShop;
+window.renderAchievements = renderAchievements;
+window.renderLeaderboard = renderLeaderboard;
+window.renderDailyChallenges = renderDailyChallenges;
+window.formatNumber = formatNumber;
 
 // ============================================
 // SHOP RENDERING FUNCTION
