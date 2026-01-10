@@ -13,9 +13,9 @@ const CONFIG = {
     SUPABASE_URL: 'https://slmynfgspupncsijhzpd.supabase.co',
     SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsbXluZmdzcHVwbmNzaWpoenBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3Nzk1MTEsImV4cCI6MjA4MzM1NTUxMX0.HY8ZiQkWMRRA0jVMutTorc5Cc2zt1x38dalot-A_gLI',
     
-    // Quiz Limits (free: 2/month, premium/exclusive: daily)
+    // Quiz Limits
     QUIZ_LIMITS: {
-        free: 2,
+        free: 10,
         premium: 100,
         exclusive: 999
     },
@@ -212,30 +212,64 @@ const ANIMATIONS = new AnimationController();
 async function initApp() {
     console.log('🚀 Initializing Nexus Media App...');
     
+    // Load settings first
+    loadSettings();
+    
+    // Initialize Telegram WebApp
+    const telegramReady = initTelegram();
+    
+    // Initialize Supabase
+    await initSupabase();
+    
+    // Load user data
+    await loadUserData();
+    
+    // Sync RPG data
+    await syncRPGData();
+    
+    // Set up global feedback listeners
+    addGlobalClickListeners();
+    
+    // Initialize UI
+    updateUI();
+    
+    // Initialize components
+    initRecommendations();
+    initQuizOptions();
+    initMining();
+    
+    // Hide loader
+    const loader = document.getElementById('loader');
+    const app = document.getElementById('app');
+    if (loader) loader.classList.add('hidden');
+    if (app) app.classList.add('visible');
+    
+    console.log('Nexus WebApp initialized');
+    
     // 1. Load local state first
     loadLocalState();
     
     // 2. Initialize Telegram WebApp
-    const tgInitialized = initTelegram();
+    const tgInitialized = telegramReady;
     console.log('Telegram initialized:', tgInitialized);
     
     // 3. Initialize Supabase
-    await initSupabase();
+    // await initSupabase(); // Already initialized above
     
     // 4. Load user data
-    await loadUserData();
+    // await loadUserData(); // Already loaded above
     
     // 5. Sync RPG data
-    await syncRPGData();
+    // await syncRPGData(); // Already synced above
     
     // 6. Initialize visuals
     initVisuals();
     
     // 7. Initialize mining
-    initMining();
+    // initMining(); // Already initialized above
     
     // 8. Initialize recommendations carousel
-    initRecommendations();
+    // initRecommendations(); // Already initialized above
     
     // 9. Generate daily challenges
     generateDailyChallenges();
@@ -935,11 +969,6 @@ function initTelegram() {
             tg.ready();
             tg.expand();
             
-            // Disable vertical swipes to prevent accidental close
-            if (tg.disableVerticalSwipes) {
-                tg.disableVerticalSwipes();
-            }
-            
             // Apply theme
             document.documentElement.style.setProperty('--tg-theme-bg', tg.themeParams.bg_color || '#0a0a0f');
             
@@ -1236,6 +1265,7 @@ async function addXP(amount, source = 'quiz') {
     // Check for level up
     if (levelInfo.level > oldLevel) {
         showToast('🎉 Level Up!', `Siz ${levelInfo.name} darajasiga ko'tarildingiz!`, 'success');
+        triggerFeedback('levelup');
         
         // Bonus gold for level up
         const bonusGold = levelInfo.level * 5;
@@ -1249,6 +1279,7 @@ async function addXP(amount, source = 'quiz') {
     });
     
     showToast('+' + amount + ' XP', `${source} uchun`, 'success');
+    triggerFeedback('success');
     
     // Check Achievements and Challenges
     checkAchievements();
@@ -1266,6 +1297,7 @@ async function addGold(amount, source = 'mining') {
     
     if (amount > 0) {
         showToast('+' + amount + ' Gold', `${source} uchun`, 'success');
+        triggerFeedback('success');
     }
 }
 
@@ -2215,6 +2247,101 @@ async function showBattleResults(roomData) {
 }
 
 // ===========================================
+// GLOBAL FEEDBACK & INTERACTIONS
+// ===========================================
+
+function triggerFeedback(type = 'tap') {
+    if (!AppState.settings) AppState.settings = { soundEnabled: true, hapticEnabled: true };
+    if (AppState.settings.soundEnabled) playSound(type);
+    if (AppState.settings.hapticEnabled && navigator.vibrate) {
+        const pattern = {
+            tap: 10,
+            critical: 50,
+            success: [20, 10, 20],
+            error: [50, 30, 50],
+            click: 8,
+            unlock: [10, 5, 10],
+            levelup: [15, 10, 15, 10, 15]
+        };
+        const p = pattern[type] || pattern.tap;
+        navigator.vibrate(Array.isArray(p) ? p : [p]);
+    }
+}
+
+function addGlobalClickListeners() {
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button, .premium-cta, .plan-btn, .nav-item, .function-card, .quiz-option, .shop-btn, .achievement-badge, .category-card, .feature-card, .action-icon');
+        if (btn) {
+            gsap.fromTo(btn, { scale: 1 }, { scale: 0.96, duration: 0.1, yoyo: true, repeat: 1, ease: 'power2.inOut' });
+            triggerFeedback('click');
+        }
+    });
+}
+
+// ===========================================
+// SETTINGS MODAL (SOUND/HAPTIC TOGGLE)
+// ===========================================
+
+function openSettings() {
+    const modal = document.getElementById('settingsModal');
+    if (!modal) {
+        const modalHtml = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Sozlamalar</h3>
+                    <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="soundToggle" ${AppState.settings?.soundEnabled !== false ? 'checked' : ''}>
+                            <span>Ovozli effektlar</span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="hapticToggle" ${AppState.settings?.hapticEnabled !== false ? 'checked' : ''}>
+                            <span>Vibratsiya (haptic)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+        const modalEl = document.createElement('div');
+        modalEl.id = 'settingsModal';
+        modalEl.className = 'modal';
+        modalEl.innerHTML = modalHtml;
+        document.body.appendChild(modalEl);
+    }
+    modal.classList.add('active');
+    triggerFeedback('click');
+}
+
+function saveSettings() {
+    const sound = document.getElementById('soundToggle')?.checked ?? true;
+    const haptic = document.getElementById('hapticToggle')?.checked ?? true;
+    AppState.settings = { soundEnabled: sound, hapticEnabled: haptic };
+    localStorage.setItem('nexus_settings', JSON.stringify(AppState.settings));
+    closeModal('settingsModal');
+    showToast('Saqlandi', 'Sozlamalar saqlandi', 'success');
+    triggerFeedback('success');
+}
+
+// Load settings on init
+function loadSettings() {
+    try {
+        const stored = localStorage.getItem('nexus_settings');
+        if (stored) {
+            AppState.settings = JSON.parse(stored);
+        } else {
+            AppState.settings = { soundEnabled: true, hapticEnabled: true };
+        }
+    } catch {
+        AppState.settings = { soundEnabled: true, hapticEnabled: true };
+    }
+}
+
+// ===========================================
 // PAYMENT SYSTEM
 // ===========================================
 
@@ -2223,6 +2350,7 @@ function formatNumber(num) {
 }
 
 function buyPremium(planType) {
+    triggerFeedback('unlock');
     showPayment(planType);
 }
 
@@ -2306,7 +2434,7 @@ async function uploadReceipt(event) {
         const price = CONFIG.PREMIUM_PRICES[plan] || 25000;
         
         const { error: dbError } = await supabaseClient
-            .from('payment_requests')
+            .from('payments')
             .insert({
                 user_id: user.user_id,
                 plan: plan,
@@ -3330,6 +3458,12 @@ function updateUI() {
     const user = AppState.user;
     if (!user) return;
     
+    // Reveal performance hub once data is available
+    const perfLoader = document.getElementById('performanceLoader');
+    const perfHub = document.getElementById('performanceHub');
+    if (perfLoader) perfLoader.classList.add('hidden');
+    if (perfHub) perfHub.classList.remove('hidden');
+    
     // Header
     document.getElementById('userName').textContent = user.full_name || 'Foydalanuvchi';
     document.getElementById('userAvatar').textContent = (user.full_name || 'U')[0].toUpperCase();
@@ -3345,53 +3479,98 @@ function updateUI() {
     tierEl.innerHTML = `<i class="fas fa-circle"></i><span>${tierName}</span>`;
     tierEl.className = `user-tier ${user.is_premium ? 'premium' : ''}`;
     
-    // Stats with progress bars (Yutuqlar doskasi)
-    const level = user.level || 1;
-    const streak = user.streak_count || 0;
-    const quizzes = user.quiz_count_today || 0;
+    // Level insights
+    const levelInfo = calculateLevel(user.xp || 0);
+    const nextXPDelta = Math.max(0, (levelInfo.nextLevelXP || 0) - (levelInfo.levelXP || 0));
     
-    document.getElementById('statLevel').textContent = level;
-    document.getElementById('statStreak').textContent = streak;
-    document.getElementById('statQuizzes').textContent = quizzes;
+    const levelNameEl = document.getElementById('levelName');
+    if (levelNameEl) levelNameEl.textContent = levelInfo.name;
     
-    // Animate progress bars
-    const levelProgress = document.getElementById('levelProgress');
+    const statLevelLarge = document.getElementById('statLevelLarge');
+    if (statLevelLarge) statLevelLarge.textContent = levelInfo.level;
+    
+    const levelProgressFill = document.getElementById('levelProgressFill');
+    if (levelProgressFill) {
+        gsap.to(levelProgressFill, { width: `${levelInfo.percent}%`, duration: 0.6, ease: 'power2.out' });
+    }
+    
+    const levelCurrentXP = document.getElementById('levelCurrentXP');
+    if (levelCurrentXP) {
+        levelCurrentXP.textContent = `${formatNumber(levelInfo.levelXP)} / ${formatNumber(levelInfo.nextLevelXP)} XP`;
+    }
+    
+    const levelNextXP = document.getElementById('levelNextXP');
+    if (levelNextXP) {
+        levelNextXP.textContent = `${formatNumber(nextXPDelta)} XP to go`;
+    }
+    
+    const xpDelta = document.getElementById('xpDelta');
+    if (xpDelta) xpDelta.textContent = `${formatNumber(nextXPDelta)} XP`;
+    
+    // Focus cards
+    const streakValue = user.streak_count || 0;
+    const streakValueEl = document.getElementById('streakValue');
+    if (streakValueEl) streakValueEl.textContent = streakValue;
+    
+    const streakNote = document.getElementById('streakNote');
+    if (streakNote) {
+        streakNote.textContent = streakValue > 0 ? `${streakValue} kun ketma-ket` : 'Start your streak';
+    }
+    
     const streakProgress = document.getElementById('streakProgress');
-    const quizProgress = document.getElementById('quizProgress');
-    const rankProgress = document.getElementById('rankProgress');
-    
-    if (levelProgress) {
-        const xpForNext = level * 100;
-        const currentXP = user.xp || 0;
-        const levelPercent = Math.min(100, (currentXP % xpForNext) / xpForNext * 100);
-        gsap.to(levelProgress, { width: levelPercent + '%', duration: 0.8, ease: 'power2.out' });
-    }
     if (streakProgress) {
-        const streakPercent = Math.min(100, streak * 10);
-        gsap.to(streakProgress, { width: streakPercent + '%', duration: 0.8, ease: 'power2.out', delay: 0.1 });
-    }
-    if (quizProgress) {
-        const quizPercent = Math.min(100, quizzes * 5);
-        gsap.to(quizProgress, { width: quizPercent + '%', duration: 0.8, ease: 'power2.out', delay: 0.2 });
-    }
-    if (rankProgress) {
-        gsap.to(rankProgress, { width: '50%', duration: 0.8, ease: 'power2.out', delay: 0.3 });
+        const streakPercent = Math.min(100, (streakValue / 7) * 100);
+        streakProgress.style.width = `${streakPercent}%`;
     }
     
-    // Mining balance
-    ANIMATIONS.animateNumber('miningBalance', Math.floor(AppState.mining.balance));
+    const rankValue = document.getElementById('rankValue');
+    if (rankValue) rankValue.textContent = user.rank_position ? `#${user.rank_position}` : '#--';
     
-    // Quiz limits (free: monthly, premium: daily)
-    const isFree = !user.premium_type || user.premium_type === 'free';
+    const rankNote = document.getElementById('rankNote');
+    if (rankNote) {
+        rankNote.textContent = user.rank_position ? 'Top joyda davom eting' : 'Top bo‘lish uchun raqobat';
+    }
+    
+    // Quiz limits
     const limit = CONFIG.QUIZ_LIMITS[user.premium_type] || CONFIG.QUIZ_LIMITS.free;
-    const used = isFree ? (user.quiz_count_month || 0) : (user.quiz_count_today || 0);
+    const used = user.quiz_count_today || 0;
     const remaining = Math.max(0, limit - used);
     
     AppState.quiz.remaining = remaining;
     AppState.quiz.total = limit;
     
-    document.getElementById('quizRemaining').textContent = remaining;
-    document.getElementById('quizTotal').textContent = limit;
+    const quizUsage = document.getElementById('quizUsage');
+    if (quizUsage) quizUsage.textContent = `${used}/${limit}`;
+    
+    const quizNote = document.getElementById('quizNote');
+    if (quizNote) quizNote.textContent = remaining > 0 ? `${remaining} ta savol qoldi` : 'Premiumda cheksiz';
+    
+    const quizUsageBar = document.getElementById('quizUsageBar');
+    if (quizUsageBar) {
+        const usagePercent = Math.min(100, (used / limit) * 100);
+        quizUsageBar.style.width = `${usagePercent}%`;
+    }
+    
+    const quizRemainingEl = document.getElementById('quizRemaining');
+    if (quizRemainingEl) quizRemainingEl.textContent = remaining;
+    const quizTotalEl = document.getElementById('quizTotal');
+    if (quizTotalEl) quizTotalEl.textContent = limit;
+    
+    // Badge strip
+    const badgeQuiz = document.getElementById('badgeQuizzes');
+    if (badgeQuiz) badgeQuiz.querySelector('.chip-value').textContent = `${used} ta`;
+    
+    const badgeFocus = document.getElementById('badgeFocus');
+    if (badgeFocus) {
+        const focusMinutes = user.focus_minutes || (streakValue * 10);
+        badgeFocus.querySelector('.chip-value').textContent = `${focusMinutes} min`;
+    }
+    
+    const badgeGold = document.getElementById('badgeGold');
+    if (badgeGold) badgeGold.querySelector('.chip-value').textContent = formatNumber(user.gold || 0);
+    
+    // Mining balance
+    ANIMATIONS.animateNumber('miningBalance', Math.floor(AppState.mining.balance));
     
     // Profile
     const profileNameEl = document.getElementById('profileName');
@@ -3414,12 +3593,11 @@ function updateUI() {
         profileAvatarLarge.textContent = (user.full_name || 'U')[0].toUpperCase();
     }
 
-    // Profile Stats
     const statStreakProfile = document.getElementById('statStreakProfile');
-    if (statStreakProfile) statStreakProfile.textContent = user.streak_count || 0;
+    if (statStreakProfile) statStreakProfile.textContent = streakValue;
     
     const statQuizzesProfile = document.getElementById('statQuizzesProfile');
-    if (statQuizzesProfile) statQuizzesProfile.textContent = user.quiz_count_today || 0;
+    if (statQuizzesProfile) statQuizzesProfile.textContent = used;
     
     // Energy bar
     const energyFill = document.getElementById('energyFill');
@@ -3478,6 +3656,7 @@ function navigateTo(section) {
 function handleTap(e) {
     if (AppState.mining.energy <= 0) {
         showToast('Energiya tugadi', 'Energiya tiklanishini kuting', 'error');
+        triggerFeedback('error');
         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
         return;
     }
@@ -3515,10 +3694,10 @@ function handleTap(e) {
     // Audio & Haptic
     if (isCritical) {
         playSound('critical');
-        if (navigator.vibrate) navigator.vibrate(50);
+        triggerFeedback('critical');
     } else {
         playSound('tap');
-        if (navigator.vibrate) navigator.vibrate(10);
+        triggerFeedback('tap');
     }
     
     // Logic
