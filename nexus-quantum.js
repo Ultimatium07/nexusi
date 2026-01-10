@@ -1396,3 +1396,184 @@ window.switchGamTab = switchGamTab;
 window.closeWaygroundRoom = closeWaygroundRoom;
 window.closeFileAnalysis = closeFileAnalysis;
 window.closeAIChat = closeAIChat;
+
+// ============================================
+// SHOP RENDERING FUNCTION
+// ============================================
+function renderShop() {
+    const grid = document.getElementById('upgradesGrid');
+    if (!grid) return;
+    
+    const upgrades = [
+        {
+            id: 'tap',
+            name: 'Tap Power',
+            description: 'Increase mining power',
+            level: QuantumState.mining.upgrades.tap,
+            cost: Math.floor(100 * Math.pow(1.5, QuantumState.mining.upgrades.tap)),
+            icon: 'hand-pointer',
+            maxLevel: 100
+        },
+        {
+            id: 'energy',
+            name: 'Energy Max',
+            description: 'Increase max energy',
+            level: QuantumState.mining.upgrades.energy,
+            cost: Math.floor(200 * Math.pow(1.5, QuantumState.mining.upgrades.energy)),
+            icon: 'battery-full',
+            maxLevel: 100
+        },
+        {
+            id: 'auto',
+            name: 'Auto Mining',
+            description: 'Automated mining',
+            level: QuantumState.mining.upgrades.auto,
+            cost: Math.floor(500 * Math.pow(1.5, QuantumState.mining.upgrades.auto)),
+            icon: 'robot',
+            maxLevel: 50
+        },
+        {
+            id: 'luck',
+            name: 'Luck',
+            description: 'Increase critical chance',
+            level: QuantumState.mining.upgrades.luck,
+            cost: Math.floor(300 * Math.pow(1.5, QuantumState.mining.upgrades.luck)),
+            icon: 'clover',
+            maxLevel: 100
+        }
+    ];
+    
+    grid.innerHTML = upgrades.map(upgrade => {
+        const canAfford = QuantumState.user.gold >= upgrade.cost;
+        const isMaxed = upgrade.level >= upgrade.maxLevel;
+        
+        return `
+            <div class="upgrade-card ${!canAfford ? 'disabled' : ''} ${isMaxed ? 'maxed' : ''}">
+                <div class="upgrade-header">
+                    <div class="upgrade-icon">
+                        <i class="fas fa-${upgrade.icon}"></i>
+                    </div>
+                    <div class="upgrade-info">
+                        <h4>${upgrade.name}</h4>
+                        <p>${upgrade.description}</p>
+                    </div>
+                </div>
+                <div class="upgrade-stats">
+                    <span class="upgrade-level">Level ${upgrade.level}/${upgrade.maxLevel}</span>
+                    <div class="upgrade-cost">
+                        <i class="fas fa-coins"></i>
+                        ${isMaxed ? 'MAX' : upgrade.cost}
+                    </div>
+                </div>
+                <button class="upgrade-btn" 
+                        onclick="purchaseUpgrade('${upgrade.id}')"
+                        ${!canAfford || isMaxed ? 'disabled' : ''}>
+                    ${isMaxed ? 'MAXED' : 'Upgrade'}
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================
+// GAMIFICATION RENDERING FUNCTIONS
+// ============================================
+function renderAchievements() {
+    const grid = document.getElementById('achievementsGrid');
+    if (!grid) return;
+    
+    const achievements = [
+        { id: 'first_mine', name: 'First Mine', desc: 'Mine for the first time', icon: 'bolt', unlocked: true },
+        { id: 'quiz_master', name: 'Quiz Master', desc: 'Get 100% on a quiz', icon: 'brain', unlocked: QuantumState.gamification.achievements.includes('quiz_master') },
+        { id: 'battle_winner', name: 'Battle Winner', desc: 'Win your first battle', icon: 'sword', unlocked: false },
+        { id: 'shop_hunter', name: 'Shop Hunter', desc: 'Buy 10 upgrades', icon: 'shopping-cart', unlocked: false },
+        { id: 'energy_master', name: 'Energy Master', desc: 'Max out energy', icon: 'battery-full', unlocked: false },
+        { id: 'gold_collector', name: 'Gold Collector', desc: 'Earn 10000 gold', icon: 'coins', unlocked: false }
+    ];
+    
+    grid.innerHTML = achievements.map(ach => `
+        <div class="achievement-card ${ach.unlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">
+                <i class="fas fa-${ach.icon}"></i>
+            </div>
+            <div class="achievement-info">
+                <h4>${ach.name}</h4>
+                <p>${ach.desc}</p>
+            </div>
+            <div class="achievement-status">
+                ${ach.unlocked ? '✓' : '🔒'}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderLeaderboard() {
+    const list = document.getElementById('leaderboardList');
+    if (!list) return;
+    
+    const leaderboard = [
+        { rank: 1, name: 'QuantumMaster', xp: 15000, gold: 25000, avatar: 'QM' },
+        { rank: 2, name: 'ProMiner', xp: 12000, gold: 20000, avatar: 'PM' },
+        { rank: 3, name: 'QuizKing', xp: 10000, gold: 18000, avatar: 'QK' },
+        { rank: 4, name: 'BattleAce', xp: 8500, gold: 15000, avatar: 'BA' },
+        { rank: 5, name: 'You', xp: QuantumState.user.xp, gold: QuantumState.user.gold, avatar: QuantumState.user.avatar, you: true }
+    ];
+    
+    list.innerHTML = leaderboard.map(player => `
+        <div class="leaderboard-item ${player.you ? 'you' : ''}">
+            <div class="rank">#${player.rank}</div>
+            <div class="player-info">
+                <div class="player-name">${player.name}</div>
+                <div class="player-stats">${formatNumber(player.xp)} XP • ${formatNumber(player.gold)} Gold</div>
+            </div>
+            <div class="player-avatar">
+                <div class="avatar-circle">${player.avatar}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderDailyChallenges() {
+    const container = document.getElementById('dailyChallengesList');
+    if (!container) return;
+    
+    const challenges = [
+        { id: 'daily_mine', name: 'Daily Miner', desc: 'Mine 100 times today', progress: 45, target: 100, reward: '50 XP, 100 Gold' },
+        { id: 'daily_quiz', name: 'Quiz Expert', desc: 'Complete 3 quizzes', progress: 1, target: 3, reward: '100 XP, 200 Gold' },
+        { id: 'daily_battle', name: 'Battle Fighter', desc: 'Win 2 battles', progress: 0, target: 2, reward: '150 XP, 300 Gold' }
+    ];
+    
+    container.innerHTML = challenges.map(challenge => `
+        <div class="challenge-card ${challenge.progress >= challenge.target ? 'completed' : ''}">
+            <div class="challenge-info">
+                <h4>${challenge.name}</h4>
+                <p>${challenge.desc}</p>
+            </div>
+            <div class="challenge-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${(challenge.progress / challenge.target) * 100}%"></div>
+                </div>
+                <span class="progress-text">${challenge.progress}/${challenge.target}</span>
+            </div>
+            <div class="challenge-reward">
+                <i class="fas fa-bolt"></i> ${challenge.reward}
+            </div>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+// Make additional functions globally available
+window.renderShop = renderShop;
+window.renderAchievements = renderAchievements;
+window.renderLeaderboard = renderLeaderboard;
+window.renderDailyChallenges = renderDailyChallenges;
+window.formatNumber = formatNumber;
